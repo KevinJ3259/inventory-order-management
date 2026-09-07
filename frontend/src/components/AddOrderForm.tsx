@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 type Customer = {
   id: number
@@ -11,6 +11,11 @@ type Product = {
   name: string
   price: number
   quantityInStock: number
+}
+
+type OrderLine = {
+  productId: number
+  quantity: number
 }
 
 type AddOrderFormProps = {
@@ -27,40 +32,137 @@ function AddOrderForm({
   const [customerId, setCustomerId] = useState('')
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('1')
+  const [items, setItems] = useState<OrderLine[]>([])
   const [message, setMessage] = useState('')
 
   const selectedProduct = products.find(
     (product) => product.id === Number(productId)
   )
 
-  const estimatedTotal =
-    selectedProduct && Number(quantity) > 0
-      ? selectedProduct.price * Number(quantity)
-      : 0
+  const orderTotal = useMemo(() => {
+    return items.reduce((total, item) => {
+      const product = products.find(
+        (product) => product.id === item.productId
+      )
+
+      if (!product) {
+        return total
+      }
+
+      return total + Number(product.price) * item.quantity
+    }, 0)
+  }, [items, products])
+
+  const handleAddItem = () => {
+    setMessage('')
+
+    const selectedProductId = Number(productId)
+    const selectedQuantity = Number(quantity)
+
+    if (!selectedProductId) {
+      setMessage('Select a product first.')
+      return
+    }
+
+    if (selectedQuantity <= 0) {
+      setMessage('Quantity must be greater than zero.')
+      return
+    }
+
+    if (
+      selectedProduct &&
+      selectedQuantity > selectedProduct.quantityInStock
+    ) {
+      setMessage(
+        `Only ${selectedProduct.quantityInStock} units are available.`
+      )
+      return
+    }
+
+    const existingItem = items.find(
+      (item) => item.productId === selectedProductId
+    )
+
+    if (existingItem) {
+      const newQuantity =
+        existingItem.quantity + selectedQuantity
+
+      if (
+        selectedProduct &&
+        newQuantity > selectedProduct.quantityInStock
+      ) {
+        setMessage(
+          `Only ${selectedProduct.quantityInStock} units are available.`
+        )
+        return
+      }
+
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.productId === selectedProductId
+            ? {
+                ...item,
+                quantity: newQuantity,
+              }
+            : item
+        )
+      )
+    } else {
+      setItems((currentItems) => [
+        ...currentItems,
+        {
+          productId: selectedProductId,
+          quantity: selectedQuantity,
+        },
+      ])
+    }
+
+    setProductId('')
+    setQuantity('1')
+  }
+
+  const handleRemoveItem = (productIdToRemove: number) => {
+    setItems((currentItems) =>
+      currentItems.filter(
+        (item) => item.productId !== productIdToRemove
+      )
+    )
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setMessage('')
 
-    const response = await fetch('http://localhost:8080/api/orders', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        customer: {
-          id: Number(customerId),
+    if (!customerId) {
+      setMessage('Select a customer.')
+      return
+    }
+
+    if (items.length === 0) {
+      setMessage('Add at least one product to the order.')
+      return
+    }
+
+    const response = await fetch(
+      'http://localhost:8080/api/orders',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        items: [
-          {
-            product: {
-              id: Number(productId),
-            },
-            quantity: Number(quantity),
+        body: JSON.stringify({
+          customer: {
+            id: Number(customerId),
           },
-        ],
-      }),
-    })
+          items: items.map((item) => ({
+            product: {
+              id: item.productId,
+            },
+            quantity: item.quantity,
+          })),
+        }),
+      }
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -71,6 +173,7 @@ function AddOrderForm({
     setCustomerId('')
     setProductId('')
     setQuantity('1')
+    setItems([])
     setMessage('Order created successfully.')
 
     onOrderAdded()
@@ -83,7 +186,9 @@ function AddOrderForm({
       <div className="form-grid">
         <select
           value={customerId}
-          onChange={(event) => setCustomerId(event.target.value)}
+          onChange={(event) =>
+            setCustomerId(event.target.value)
+          }
           required
         >
           <option value="">Select customer</option>
@@ -97,8 +202,9 @@ function AddOrderForm({
 
         <select
           value={productId}
-          onChange={(event) => setProductId(event.target.value)}
-          required
+          onChange={(event) =>
+            setProductId(event.target.value)
+          }
         >
           <option value="">Select product</option>
 
@@ -114,22 +220,89 @@ function AddOrderForm({
           min="1"
           max={selectedProduct?.quantityInStock}
           value={quantity}
-          onChange={(event) => setQuantity(event.target.value)}
+          onChange={(event) =>
+            setQuantity(event.target.value)
+          }
           placeholder="Quantity"
-          required
         />
 
-        <div className="order-total-preview">
-          <span>Estimated Total</span>
-          <strong>${estimatedTotal.toFixed(2)}</strong>
-        </div>
+        <button
+          type="button"
+          className="primary-button"
+          onClick={handleAddItem}
+        >
+          Add Item
+        </button>
       </div>
 
-      <button type="submit" className="primary-button">
+      {items.length > 0 && (
+        <div className="order-builder">
+          <h3>Order Items</h3>
+
+          <div className="order-builder-header">
+            <span>Product</span>
+            <span>Quantity</span>
+            <span>Price</span>
+            <span>Line Total</span>
+            <span>Action</span>
+          </div>
+
+          {items.map((item) => {
+            const product = products.find(
+              (product) => product.id === item.productId
+            )
+
+            if (!product) {
+              return null
+            }
+
+            const lineTotal =
+              Number(product.price) * item.quantity
+
+            return (
+              <div
+                className="order-builder-row"
+                key={item.productId}
+              >
+                <span>{product.name}</span>
+                <span>{item.quantity}</span>
+                <span>
+                  ${Number(product.price).toFixed(2)}
+                </span>
+                <span>${lineTotal.toFixed(2)}</span>
+
+                <span>
+                  <button
+                    type="button"
+                    className="delete-button"
+                    onClick={() =>
+                      handleRemoveItem(item.productId)
+                    }
+                  >
+                    Remove
+                  </button>
+                </span>
+              </div>
+            )
+          })}
+
+          <div className="order-builder-total">
+            <span>Order Total</span>
+            <strong>${orderTotal.toFixed(2)}</strong>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className="primary-button place-order-button"
+      >
         Place Order
       </button>
 
-      {message && <p className="form-message">{message}</p>}
+      {message && (
+        <p className="form-message">{message}</p>
+      )}
     </form>
   )
 }
