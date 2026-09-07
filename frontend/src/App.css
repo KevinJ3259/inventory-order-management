@@ -670,3 +670,19 @@ button {
     width: 100%;
   }
 }
+
+.customers-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.customer-form h2 {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.customers-table-header,
+.customers-table-row {
+  grid-template-columns: 1.5fr 2fr 1.2fr 1fr;
+}

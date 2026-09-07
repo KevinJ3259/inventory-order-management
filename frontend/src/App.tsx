@@ -283,7 +283,10 @@ function App() {
               <p>View customer contact information and account details.</p>
             </header>
 
-            <Customers customers={customers} />
+            <Customers
+              customers={customers}
+              onRefresh={loadData}
+            />
           </>
         )}
 
