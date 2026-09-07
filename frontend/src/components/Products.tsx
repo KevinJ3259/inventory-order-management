@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import AddProductForm from './AddProductForm'
+
 type Product = {
   id: number
   name: string
@@ -10,39 +13,206 @@ type Product = {
 
 type ProductsProps = {
   products: Product[]
+  onRefresh: () => void
 }
 
-function Products({ products }: ProductsProps) {
+function Products({ products, onRefresh }: ProductsProps) {
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+
+  const handleDelete = async (product: Product) => {
+    const confirmed = window.confirm(
+      `Delete ${product.name}? This cannot be undone.`
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    const response = await fetch(
+      `http://localhost:8080/api/products/${product.id}`,
+      {
+        method: 'DELETE',
+      }
+    )
+
+    if (!response.ok) {
+      alert('Unable to delete product.')
+      return
+    }
+
+    onRefresh()
+  }
+
+  const handleEditChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    if (!editingProduct) return
+
+    const { name, value } = event.target
+
+    setEditingProduct({
+      ...editingProduct,
+      [name]:
+        name === 'price' ||
+        name === 'quantityInStock' ||
+        name === 'reorderLevel'
+          ? Number(value)
+          : value,
+    })
+  }
+
+  const handleUpdate = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!editingProduct) return
+
+    const response = await fetch(
+      `http://localhost:8080/api/products/${editingProduct.id}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editingProduct),
+      }
+    )
+
+    if (!response.ok) {
+      alert('Unable to update product.')
+      return
+    }
+
+    setEditingProduct(null)
+    onRefresh()
+  }
+
   return (
-    <section className="panel">
-      <div className="panel-header">
-        <h2>Products</h2>
-      </div>
+    <div className="products-page">
+      <section className="panel">
+        <AddProductForm onProductAdded={onRefresh} />
+      </section>
 
-      {products.length === 0 ? (
-        <p>No products found.</p>
-      ) : (
-        <div className="products-table">
-          <div className="products-table-header">
-            <span>Name</span>
-            <span>SKU</span>
-            <span>Price</span>
-            <span>Stock</span>
-            <span>Reorder Level</span>
-          </div>
+      {editingProduct && (
+        <section className="panel">
+          <form className="product-form" onSubmit={handleUpdate}>
+            <h2>Edit Product</h2>
 
-          {products.map((product) => (
-            <div className="products-table-row" key={product.id}>
-              <span>{product.name}</span>
-              <span>{product.sku}</span>
-              <span>${Number(product.price).toFixed(2)}</span>
-              <span>{product.quantityInStock}</span>
-              <span>{product.reorderLevel}</span>
+            <div className="form-grid">
+              <input
+                name="name"
+                value={editingProduct.name}
+                onChange={handleEditChange}
+                required
+              />
+
+              <input
+                name="sku"
+                value={editingProduct.sku}
+                onChange={handleEditChange}
+                required
+              />
+
+              <input
+                name="price"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={editingProduct.price}
+                onChange={handleEditChange}
+                required
+              />
+
+              <input
+                name="quantityInStock"
+                type="number"
+                min="0"
+                value={editingProduct.quantityInStock}
+                onChange={handleEditChange}
+                required
+              />
+
+              <input
+                name="reorderLevel"
+                type="number"
+                min="0"
+                value={editingProduct.reorderLevel}
+                onChange={handleEditChange}
+                required
+              />
+
+              <textarea
+                name="description"
+                value={editingProduct.description ?? ''}
+                onChange={handleEditChange}
+              />
             </div>
-          ))}
-        </div>
+
+            <div className="edit-actions">
+              <button type="submit" className="primary-button">
+                Save Changes
+              </button>
+
+              <button
+                type="button"
+                className="cancel-button"
+                onClick={() => setEditingProduct(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </section>
       )}
-    </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <h2>Products</h2>
+        </div>
+
+        {products.length === 0 ? (
+          <p>No products found.</p>
+        ) : (
+          <div className="products-table">
+            <div className="products-table-header">
+              <span>Name</span>
+              <span>SKU</span>
+              <span>Price</span>
+              <span>Stock</span>
+              <span>Reorder Level</span>
+              <span>Actions</span>
+            </div>
+
+            {products.map((product) => (
+              <div className="products-table-row" key={product.id}>
+                <span>{product.name}</span>
+                <span>{product.sku}</span>
+                <span>${Number(product.price).toFixed(2)}</span>
+                <span>{product.quantityInStock}</span>
+                <span>{product.reorderLevel}</span>
+
+                <span className="action-buttons">
+                  <button
+                    type="button"
+                    className="edit-button"
+                    onClick={() => setEditingProduct(product)}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    className="delete-button"
+                    onClick={() => handleDelete(product)}
+                  >
+                    Delete
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
   )
 }
 

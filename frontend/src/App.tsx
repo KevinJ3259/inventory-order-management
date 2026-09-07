@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 
 import Products from './components/Products'
@@ -52,64 +52,62 @@ const API_BASE = 'http://localhost:8080/api'
 
 function App() {
   const [activeView, setActiveView] = useState<View>('dashboard')
-
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [reorderAlerts, setReorderAlerts] = useState<Product[]>([])
-
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        setLoading(true)
-        setError('')
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError('')
 
-        const [
-          productsResponse,
-          customersResponse,
-          ordersResponse,
-          alertsResponse,
-        ] = await Promise.all([
-          fetch(`${API_BASE}/products`),
-          fetch(`${API_BASE}/customers`),
-          fetch(`${API_BASE}/orders`),
-          fetch(`${API_BASE}/products/reorder-alerts`),
-        ])
+      const [
+        productsResponse,
+        customersResponse,
+        ordersResponse,
+        alertsResponse,
+      ] = await Promise.all([
+        fetch(`${API_BASE}/products`),
+        fetch(`${API_BASE}/customers`),
+        fetch(`${API_BASE}/orders`),
+        fetch(`${API_BASE}/products/reorder-alerts`),
+      ])
 
-        if (
-          !productsResponse.ok ||
-          !customersResponse.ok ||
-          !ordersResponse.ok ||
-          !alertsResponse.ok
-        ) {
-          throw new Error('Unable to load application data.')
-        }
-
-        const productsData: Product[] = await productsResponse.json()
-        const customersData: Customer[] = await customersResponse.json()
-        const ordersData: Order[] = await ordersResponse.json()
-        const alertsData: Product[] = await alertsResponse.json()
-
-        setProducts(productsData)
-        setCustomers(customersData)
-        setOrders(ordersData)
-        setReorderAlerts(alertsData)
-      } catch (err) {
-        console.error(err)
-
-        setError(
-          'Unable to connect to the backend. Make sure Spring Boot is running on port 8080.'
-        )
-      } finally {
-        setLoading(false)
+      if (
+        !productsResponse.ok ||
+        !customersResponse.ok ||
+        !ordersResponse.ok ||
+        !alertsResponse.ok
+      ) {
+        throw new Error('Unable to load application data.')
       }
-    }
 
-    loadData()
+      const productsData: Product[] = await productsResponse.json()
+      const customersData: Customer[] = await customersResponse.json()
+      const ordersData: Order[] = await ordersResponse.json()
+      const alertsData: Product[] = await alertsResponse.json()
+
+      setProducts(productsData)
+      setCustomers(customersData)
+      setOrders(ordersData)
+      setReorderAlerts(alertsData)
+    } catch (err) {
+      console.error(err)
+
+      setError(
+        'Unable to connect to the backend. Make sure Spring Boot is running on port 8080.'
+      )
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   const recentOrder =
     orders.length > 0 ? orders[orders.length - 1] : null
@@ -177,9 +175,7 @@ function App() {
           <>
             <header className="topbar">
               <h1>Inventory &amp; Order Management</h1>
-              <p>
-                Manage products, customers, orders, and stock levels.
-              </p>
+              <p>Manage products, customers, orders, and stock levels.</p>
             </header>
 
             <section className="stats-grid">
@@ -221,10 +217,7 @@ function App() {
                   <p>No products currently need to be reordered.</p>
                 ) : (
                   reorderAlerts.slice(0, 3).map((product) => (
-                    <div
-                      className="low-stock-item"
-                      key={product.id}
-                    >
+                    <div className="low-stock-item" key={product.id}>
                       <div>
                         <h3>{product.name}</h3>
                         <p>SKU: {product.sku}</p>
@@ -245,9 +238,8 @@ function App() {
                   <div className="recent-order-details">
                     <p>
                       <strong>Customer:</strong>{' '}
-                      {recentOrder.customer
-                        ? `${recentOrder.customer.firstName} ${recentOrder.customer.lastName}`
-                        : 'Unknown'}
+                      {recentOrder.customer.firstName}{' '}
+                      {recentOrder.customer.lastName}
                     </p>
 
                     <p>
@@ -277,7 +269,10 @@ function App() {
               <p>View inventory, pricing, and reorder levels.</p>
             </header>
 
-            <Products products={products} />
+            <Products
+              products={products}
+              onRefresh={loadData}
+            />
           </>
         )}
 
@@ -285,10 +280,7 @@ function App() {
           <>
             <header className="topbar">
               <h1>Customers</h1>
-              <p>
-                View customer contact information and account
-                details.
-              </p>
+              <p>View customer contact information and account details.</p>
             </header>
 
             <Customers customers={customers} />
@@ -299,10 +291,7 @@ function App() {
           <>
             <header className="topbar">
               <h1>Orders</h1>
-              <p>
-                View placed orders, totals, customers, and line
-                items.
-              </p>
+              <p>View placed orders, totals, customers, and line items.</p>
             </header>
 
             <Orders orders={orders} />
