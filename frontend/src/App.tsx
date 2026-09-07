@@ -297,7 +297,12 @@ function App() {
               <p>View placed orders, totals, customers, and line items.</p>
             </header>
 
-            <Orders orders={orders} />
+            <Orders
+              orders={orders}
+              customers={customers}
+              products={products}
+              onRefresh={loadData}
+            />
           </>
         )}
 

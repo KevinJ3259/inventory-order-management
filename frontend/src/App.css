@@ -686,3 +686,44 @@ button {
 .customers-table-row {
   grid-template-columns: 1.5fr 2fr 1.2fr 1fr;
 }
+
+.orders-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.order-form h2 {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.form-grid select {
+  width: 100%;
+  padding: 12px 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #111827;
+  font: inherit;
+}
+
+.order-total-preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px 13px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.order-total-preview span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.order-total-preview strong {
+  margin-top: 4px;
+  font-size: 20px;
+}
