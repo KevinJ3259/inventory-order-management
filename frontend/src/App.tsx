@@ -1,0 +1,332 @@
+import { useEffect, useState } from 'react'
+import './App.css'
+
+import Products from './components/Products'
+import Customers from './components/Customers'
+import Orders from './components/Orders'
+import ReorderAlerts from './components/ReorderAlerts'
+
+type Product = {
+  id: number
+  name: string
+  sku: string
+  description: string
+  price: number
+  quantityInStock: number
+  reorderLevel: number
+}
+
+type Customer = {
+  id: number
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+}
+
+type OrderItem = {
+  id: number
+  quantity: number
+  unitPrice: number
+  lineTotal: number
+  product: Product
+}
+
+type Order = {
+  id: number
+  status: string
+  totalAmount: number
+  orderDate: string
+  customer: Customer
+  items: OrderItem[]
+}
+
+type View =
+  | 'dashboard'
+  | 'products'
+  | 'customers'
+  | 'orders'
+  | 'reorder-alerts'
+
+const API_BASE = 'http://localhost:8080/api'
+
+function App() {
+  const [activeView, setActiveView] = useState<View>('dashboard')
+
+  const [products, setProducts] = useState<Product[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [reorderAlerts, setReorderAlerts] = useState<Product[]>([])
+
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true)
+        setError('')
+
+        const [
+          productsResponse,
+          customersResponse,
+          ordersResponse,
+          alertsResponse,
+        ] = await Promise.all([
+          fetch(`${API_BASE}/products`),
+          fetch(`${API_BASE}/customers`),
+          fetch(`${API_BASE}/orders`),
+          fetch(`${API_BASE}/products/reorder-alerts`),
+        ])
+
+        if (
+          !productsResponse.ok ||
+          !customersResponse.ok ||
+          !ordersResponse.ok ||
+          !alertsResponse.ok
+        ) {
+          throw new Error('Unable to load application data.')
+        }
+
+        const productsData: Product[] = await productsResponse.json()
+        const customersData: Customer[] = await customersResponse.json()
+        const ordersData: Order[] = await ordersResponse.json()
+        const alertsData: Product[] = await alertsResponse.json()
+
+        setProducts(productsData)
+        setCustomers(customersData)
+        setOrders(ordersData)
+        setReorderAlerts(alertsData)
+      } catch (err) {
+        console.error(err)
+
+        setError(
+          'Unable to connect to the backend. Make sure Spring Boot is running on port 8080.'
+        )
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const recentOrder =
+    orders.length > 0 ? orders[orders.length - 1] : null
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand">InventoryPro</div>
+
+        <nav className="nav-menu">
+          <button
+            className={activeView === 'dashboard' ? 'active-nav' : ''}
+            onClick={() => setActiveView('dashboard')}
+          >
+            Dashboard
+          </button>
+
+          <button
+            className={activeView === 'products' ? 'active-nav' : ''}
+            onClick={() => setActiveView('products')}
+          >
+            Products
+          </button>
+
+          <button
+            className={activeView === 'customers' ? 'active-nav' : ''}
+            onClick={() => setActiveView('customers')}
+          >
+            Customers
+          </button>
+
+          <button
+            className={activeView === 'orders' ? 'active-nav' : ''}
+            onClick={() => setActiveView('orders')}
+          >
+            Orders
+          </button>
+
+          <button
+            className={
+              activeView === 'reorder-alerts' ? 'active-nav' : ''
+            }
+            onClick={() => setActiveView('reorder-alerts')}
+          >
+            Reorder Alerts
+          </button>
+        </nav>
+      </aside>
+
+      <main className="main-content">
+        {loading && (
+          <div className="message-card">
+            <h2>Loading InventoryPro...</h2>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="message-card error-message">
+            <h2>Connection Error</h2>
+            <p>{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && activeView === 'dashboard' && (
+          <>
+            <header className="topbar">
+              <h1>Inventory &amp; Order Management</h1>
+              <p>
+                Manage products, customers, orders, and stock levels.
+              </p>
+            </header>
+
+            <section className="stats-grid">
+              <div className="stat-card">
+                <span>Total Products</span>
+                <strong>{products.length}</strong>
+              </div>
+
+              <div className="stat-card">
+                <span>Customers</span>
+                <strong>{customers.length}</strong>
+              </div>
+
+              <div className="stat-card">
+                <span>Orders</span>
+                <strong>{orders.length}</strong>
+              </div>
+
+              <div className="stat-card alert-card">
+                <span>Reorder Alerts</span>
+                <strong>{reorderAlerts.length}</strong>
+              </div>
+            </section>
+
+            <section className="dashboard-grid">
+              <div className="panel">
+                <div className="panel-heading">
+                  <h2>Low Stock Products</h2>
+
+                  <button
+                    className="primary-button"
+                    onClick={() => setActiveView('reorder-alerts')}
+                  >
+                    View All
+                  </button>
+                </div>
+
+                {reorderAlerts.length === 0 ? (
+                  <p>No products currently need to be reordered.</p>
+                ) : (
+                  reorderAlerts.slice(0, 3).map((product) => (
+                    <div
+                      className="low-stock-item"
+                      key={product.id}
+                    >
+                      <div>
+                        <h3>{product.name}</h3>
+                        <p>SKU: {product.sku}</p>
+                      </div>
+
+                      <span className="stock-badge">
+                        {product.quantityInStock} in stock
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="panel recent-order">
+                <h2>Recent Order</h2>
+
+                {recentOrder ? (
+                  <div className="recent-order-details">
+                    <p>
+                      <strong>Customer:</strong>{' '}
+                      {recentOrder.customer
+                        ? `${recentOrder.customer.firstName} ${recentOrder.customer.lastName}`
+                        : 'Unknown'}
+                    </p>
+
+                    <p>
+                      <strong>Status:</strong>{' '}
+                      <span className="status-badge">
+                        {recentOrder.status}
+                      </span>
+                    </p>
+
+                    <p>
+                      <strong>Total:</strong> $
+                      {Number(recentOrder.totalAmount).toFixed(2)}
+                    </p>
+                  </div>
+                ) : (
+                  <p>No orders have been placed yet.</p>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        {!loading && !error && activeView === 'products' && (
+          <>
+            <header className="topbar">
+              <h1>Products</h1>
+              <p>View inventory, pricing, and reorder levels.</p>
+            </header>
+
+            <Products products={products} />
+          </>
+        )}
+
+        {!loading && !error && activeView === 'customers' && (
+          <>
+            <header className="topbar">
+              <h1>Customers</h1>
+              <p>
+                View customer contact information and account
+                details.
+              </p>
+            </header>
+
+            <Customers customers={customers} />
+          </>
+        )}
+
+        {!loading && !error && activeView === 'orders' && (
+          <>
+            <header className="topbar">
+              <h1>Orders</h1>
+              <p>
+                View placed orders, totals, customers, and line
+                items.
+              </p>
+            </header>
+
+            <Orders orders={orders} />
+          </>
+        )}
+
+        {!loading &&
+          !error &&
+          activeView === 'reorder-alerts' && (
+            <>
+              <header className="topbar">
+                <h1>Reorder Alerts</h1>
+                <p>
+                  Products that have reached or fallen below their
+                  reorder level.
+                </p>
+              </header>
+
+              <ReorderAlerts products={reorderAlerts} />
+            </>
+          )}
+      </main>
+    </div>
+  )
+}
+
+export default App
