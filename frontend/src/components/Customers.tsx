@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import AddCustomerForm from './AddCustomerForm'
 
 type Customer = {
@@ -15,7 +15,31 @@ type CustomersProps = {
 }
 
 function Customers({ customers, onRefresh }: CustomersProps) {
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null)
+  const [editingCustomer, setEditingCustomer] =
+    useState<Customer | null>(null)
+
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredCustomers = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase()
+
+    if (!query) {
+      return customers
+    }
+
+    return customers.filter((customer) => {
+      const fullName =
+        `${customer.firstName} ${customer.lastName}`.toLowerCase()
+
+      return (
+        fullName.includes(query) ||
+        customer.firstName.toLowerCase().includes(query) ||
+        customer.lastName.toLowerCase().includes(query) ||
+        customer.email.toLowerCase().includes(query) ||
+        (customer.phone ?? '').toLowerCase().includes(query)
+      )
+    })
+  }, [customers, searchTerm])
 
   const handleDelete = async (customer: Customer) => {
     const confirmed = window.confirm(
@@ -142,8 +166,17 @@ function Customers({ customers, onRefresh }: CustomersProps) {
           <h2>Customers</h2>
         </div>
 
-        {customers.length === 0 ? (
-          <p>No customers found.</p>
+        <div className="search-bar">
+          <input
+            type="search"
+            placeholder="Search by name, email, or phone..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+        </div>
+
+        {filteredCustomers.length === 0 ? (
+          <p>No matching customers found.</p>
         ) : (
           <div className="customers-table">
             <div className="customers-table-header">
@@ -153,14 +186,13 @@ function Customers({ customers, onRefresh }: CustomersProps) {
               <span>Actions</span>
             </div>
 
-            {customers.map((customer) => (
+            {filteredCustomers.map((customer) => (
               <div className="customers-table-row" key={customer.id}>
                 <span>
                   {customer.firstName} {customer.lastName}
                 </span>
 
                 <span>{customer.email}</span>
-
                 <span>{customer.phone}</span>
 
                 <span className="action-buttons">

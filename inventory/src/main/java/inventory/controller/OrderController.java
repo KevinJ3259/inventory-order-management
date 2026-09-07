@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -28,12 +29,16 @@ public class OrderController {
     }
 
     @GetMapping("/customer/{customerId}")
-    public List<Order> getOrdersByCustomer(@PathVariable Long customerId) {
+    public List<Order> getOrdersByCustomer(
+            @PathVariable Long customerId) {
+
         return orderService.getOrdersByCustomer(customerId);
     }
 
     @GetMapping("/status/{status}")
-    public List<Order> getOrdersByStatus(@PathVariable String status) {
+    public List<Order> getOrdersByStatus(
+            @PathVariable String status) {
+
         return orderService.getOrdersByStatus(status);
     }
 
@@ -41,5 +46,15 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public Order createOrder(@RequestBody Order order) {
         return orderService.createOrder(order);
+    }
+
+    @PutMapping("/{id}/status")
+    public Order updateOrderStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+
+        return orderService.updateOrderStatus(
+                id,
+                request.get("status"));
     }
 }

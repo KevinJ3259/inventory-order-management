@@ -12,9 +12,17 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class OrderService {
+
+    private static final Set<String> VALID_STATUSES = Set.of(
+            "PLACED",
+            "PROCESSING",
+            "SHIPPED",
+            "COMPLETED",
+            "CANCELLED");
 
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
@@ -24,6 +32,7 @@ public class OrderService {
             OrderRepository orderRepository,
             CustomerRepository customerRepository,
             ProductRepository productRepository) {
+
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.productRepository = productRepository;
@@ -43,7 +52,7 @@ public class OrderService {
     }
 
     public List<Order> getOrdersByStatus(String status) {
-        return orderRepository.findByStatus(status);
+        return orderRepository.findByStatus(status.toUpperCase());
     }
 
     @Transactional
@@ -53,7 +62,8 @@ public class OrderService {
             throw new RuntimeException("Customer id is required");
         }
 
-        Customer customer = customerRepository.findById(order.getCustomer().getId())
+        Customer customer = customerRepository
+                .findById(order.getCustomer().getId())
                 .orElseThrow(() -> new RuntimeException(
                         "Customer not found with id: "
                                 + order.getCustomer().getId()));
@@ -61,32 +71,38 @@ public class OrderService {
         order.setCustomer(customer);
 
         if (order.getItems() == null || order.getItems().isEmpty()) {
-            throw new RuntimeException("Order must contain at least one item");
+            throw new RuntimeException(
+                    "Order must contain at least one item");
         }
 
         BigDecimal orderTotal = BigDecimal.ZERO;
 
         for (OrderItem item : order.getItems()) {
 
-            if (item.getProduct() == null || item.getProduct().getId() == null) {
+            if (item.getProduct() == null
+                    || item.getProduct().getId() == null) {
                 throw new RuntimeException("Product id is required");
             }
 
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new RuntimeException("Order item quantity must be greater than zero");
+                throw new RuntimeException(
+                        "Order item quantity must be greater than zero");
             }
 
-            Product product = productRepository.findById(item.getProduct().getId())
+            Product product = productRepository
+                    .findById(item.getProduct().getId())
                     .orElseThrow(() -> new RuntimeException(
                             "Product not found with id: "
                                     + item.getProduct().getId()));
 
             if (product.getQuantityInStock() < item.getQuantity()) {
                 throw new RuntimeException(
-                        "Insufficient stock for product: " + product.getName());
+                        "Insufficient stock for product: "
+                                + product.getName());
             }
 
-            BigDecimal lineTotal = product.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal lineTotal = product.getPrice().multiply(
+                    BigDecimal.valueOf(item.getQuantity()));
 
             item.setProduct(product);
             item.setUnitPrice(product.getPrice());
@@ -103,6 +119,27 @@ public class OrderService {
 
         order.setTotalAmount(orderTotal);
         order.setStatus("PLACED");
+
+        return orderRepository.save(order);
+    }
+
+    @Transactional
+    public Order updateOrderStatus(Long id, String status) {
+
+        Order order = getOrderById(id);
+
+        if (status == null || status.isBlank()) {
+            throw new RuntimeException("Order status is required");
+        }
+
+        String normalizedStatus = status.trim().toUpperCase();
+
+        if (!VALID_STATUSES.contains(normalizedStatus)) {
+            throw new RuntimeException(
+                    "Invalid order status: " + status);
+        }
+
+        order.setStatus(normalizedStatus);
 
         return orderRepository.save(order);
     }

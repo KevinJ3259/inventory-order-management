@@ -52,10 +52,12 @@ const API_BASE = 'http://localhost:8080/api'
 
 function App() {
   const [activeView, setActiveView] = useState<View>('dashboard')
+
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [reorderAlerts, setReorderAlerts] = useState<Product[]>([])
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -111,6 +113,12 @@ function App() {
 
   const recentOrder =
     orders.length > 0 ? orders[orders.length - 1] : null
+
+  const inventoryValue = products.reduce(
+    (total, product) =>
+      total + Number(product.price) * product.quantityInStock,
+    0
+  )
 
   return (
     <div className="app-shell">
@@ -175,7 +183,9 @@ function App() {
           <>
             <header className="topbar">
               <h1>Inventory &amp; Order Management</h1>
-              <p>Manage products, customers, orders, and stock levels.</p>
+              <p>
+                Manage products, customers, orders, and stock levels.
+              </p>
             </header>
 
             <section className="stats-grid">
@@ -198,6 +208,11 @@ function App() {
                 <span>Reorder Alerts</span>
                 <strong>{reorderAlerts.length}</strong>
               </div>
+
+              <div className="stat-card">
+                <span>Inventory Value</span>
+                <strong>${inventoryValue.toFixed(2)}</strong>
+              </div>
             </section>
 
             <section className="dashboard-grid">
@@ -217,7 +232,10 @@ function App() {
                   <p>No products currently need to be reordered.</p>
                 ) : (
                   reorderAlerts.slice(0, 3).map((product) => (
-                    <div className="low-stock-item" key={product.id}>
+                    <div
+                      className="low-stock-item"
+                      key={product.id}
+                    >
                       <div>
                         <h3>{product.name}</h3>
                         <p>SKU: {product.sku}</p>
@@ -280,7 +298,9 @@ function App() {
           <>
             <header className="topbar">
               <h1>Customers</h1>
-              <p>View customer contact information and account details.</p>
+              <p>
+                View customer contact information and account details.
+              </p>
             </header>
 
             <Customers
@@ -294,7 +314,9 @@ function App() {
           <>
             <header className="topbar">
               <h1>Orders</h1>
-              <p>View placed orders, totals, customers, and line items.</p>
+              <p>
+                View placed orders, totals, customers, and line items.
+              </p>
             </header>
 
             <Orders

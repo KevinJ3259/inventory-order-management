@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import AddProductForm from './AddProductForm'
 
 type Product = {
@@ -18,6 +18,22 @@ type ProductsProps = {
 
 function Products({ products, onRefresh }: ProductsProps) {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredProducts = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase()
+
+    if (!query) {
+      return products
+    }
+
+    return products.filter((product) => {
+      return (
+        product.name.toLowerCase().includes(query) ||
+        product.sku.toLowerCase().includes(query)
+      )
+    })
+  }, [products, searchTerm])
 
   const handleDelete = async (product: Product) => {
     const confirmed = window.confirm(
@@ -169,8 +185,17 @@ function Products({ products, onRefresh }: ProductsProps) {
           <h2>Products</h2>
         </div>
 
-        {products.length === 0 ? (
-          <p>No products found.</p>
+        <div className="search-bar">
+          <input
+            type="search"
+            placeholder="Search by product name or SKU..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+        </div>
+
+        {filteredProducts.length === 0 ? (
+          <p>No matching products found.</p>
         ) : (
           <div className="products-table">
             <div className="products-table-header">
@@ -182,7 +207,7 @@ function Products({ products, onRefresh }: ProductsProps) {
               <span>Actions</span>
             </div>
 
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <div className="products-table-row" key={product.id}>
                 <span>{product.name}</span>
                 <span>{product.sku}</span>
