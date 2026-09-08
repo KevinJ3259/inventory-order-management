@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-type CustomerFormData = {
+type Customer = {
+  id: number
   firstName: string
   lastName: string
   email: string
@@ -8,99 +9,107 @@ type CustomerFormData = {
 }
 
 type AddCustomerFormProps = {
-  onCustomerAdded: () => void
+  onCustomerAdded: (customer: Customer) => void
 }
 
-function AddCustomerForm({ onCustomerAdded }: AddCustomerFormProps) {
-  const [formData, setFormData] = useState<CustomerFormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-  })
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
+function AddCustomerForm({
+  onCustomerAdded,
+}: AddCustomerFormProps) {
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target
-
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-    }))
-  }
-
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault()
+
     setMessage('')
+    setLoading(true)
 
-    const response = await fetch('http://localhost:8080/api/customers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(formData),
-    })
+    try {
+      const response = await fetch(`${API_BASE}/customers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          phone,
+        }),
+      })
 
-    if (!response.ok) {
+      if (!response.ok) {
+        throw new Error('Unable to add customer.')
+      }
+
+      const newCustomer: Customer = await response.json()
+
+      onCustomerAdded(newCustomer)
+
+      setFirstName('')
+      setLastName('')
+      setEmail('')
+      setPhone('')
+      setMessage('Customer added successfully.')
+    } catch (error) {
+      console.error(error)
       setMessage('Unable to add customer.')
-      return
+    } finally {
+      setLoading(false)
     }
-
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-    })
-
-    setMessage('Customer added successfully.')
-    onCustomerAdded()
   }
 
   return (
     <form className="customer-form" onSubmit={handleSubmit}>
-      <h2>Add Customer</h2>
-
       <div className="form-grid">
         <input
-          name="firstName"
+          type="text"
           placeholder="First name"
-          value={formData.firstName}
-          onChange={handleChange}
+          value={firstName}
+          onChange={(event) => setFirstName(event.target.value)}
           required
         />
 
         <input
-          name="lastName"
+          type="text"
           placeholder="Last name"
-          value={formData.lastName}
-          onChange={handleChange}
+          value={lastName}
+          onChange={(event) => setLastName(event.target.value)}
           required
         />
 
         <input
-          name="email"
           type="email"
           placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
           required
         />
 
         <input
-          name="phone"
+          type="tel"
           placeholder="Phone"
-          value={formData.phone}
-          onChange={handleChange}
+          value={phone}
+          onChange={(event) => setPhone(event.target.value)}
         />
       </div>
 
-      <button type="submit" className="primary-button">
-        Add Customer
+      <button type="submit" disabled={loading}>
+        {loading ? 'Adding...' : 'Add Customer'}
       </button>
 
-      {message && <p className="form-message">{message}</p>}
+      {message && (
+        <p className="form-message">{message}</p>
+      )}
     </form>
   )
 }

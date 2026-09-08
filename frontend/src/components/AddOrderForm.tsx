@@ -13,9 +13,11 @@ type Product = {
   quantityInStock: number
 }
 
-type OrderLine = {
+type OrderItemDraft = {
   productId: number
+  productName: string
   quantity: number
+  price: number
 }
 
 type AddOrderFormProps = {
@@ -23,6 +25,9 @@ type AddOrderFormProps = {
   products: Product[]
   onOrderAdded: () => void
 }
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
 function AddOrderForm({
   customers,
@@ -32,87 +37,82 @@ function AddOrderForm({
   const [customerId, setCustomerId] = useState('')
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('1')
-  const [items, setItems] = useState<OrderLine[]>([])
+
+  const [orderItems, setOrderItems] =
+    useState<OrderItemDraft[]>([])
+
   const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const selectedProduct = products.find(
     (product) => product.id === Number(productId)
   )
 
   const orderTotal = useMemo(() => {
-    return items.reduce((total, item) => {
-      const product = products.find(
-        (product) => product.id === item.productId
-      )
-
-      if (!product) {
-        return total
-      }
-
-      return total + Number(product.price) * item.quantity
-    }, 0)
-  }, [items, products])
+    return orderItems.reduce(
+      (total, item) =>
+        total + item.price * item.quantity,
+      0
+    )
+  }, [orderItems])
 
   const handleAddItem = () => {
     setMessage('')
 
-    const selectedProductId = Number(productId)
-    const selectedQuantity = Number(quantity)
-
-    if (!selectedProductId) {
+    if (!productId || !selectedProduct) {
       setMessage('Select a product first.')
       return
     }
 
-    if (selectedQuantity <= 0) {
-      setMessage('Quantity must be greater than zero.')
-      return
-    }
+    const quantityNumber = Number(quantity)
 
     if (
-      selectedProduct &&
-      selectedQuantity > selectedProduct.quantityInStock
+      !Number.isInteger(quantityNumber) ||
+      quantityNumber <= 0
     ) {
       setMessage(
-        `Only ${selectedProduct.quantityInStock} units are available.`
+        'Quantity must be a whole number greater than zero.'
       )
       return
     }
 
-    const existingItem = items.find(
-      (item) => item.productId === selectedProductId
+    const existingItem = orderItems.find(
+      (item) => item.productId === selectedProduct.id
     )
 
+    const quantityAlreadyAdded =
+      existingItem?.quantity ?? 0
+
+    if (
+      quantityAlreadyAdded + quantityNumber >
+      selectedProduct.quantityInStock
+    ) {
+      setMessage(
+        `Only ${selectedProduct.quantityInStock} units of ${selectedProduct.name} are available.`
+      )
+      return
+    }
+
     if (existingItem) {
-      const newQuantity =
-        existingItem.quantity + selectedQuantity
-
-      if (
-        selectedProduct &&
-        newQuantity > selectedProduct.quantityInStock
-      ) {
-        setMessage(
-          `Only ${selectedProduct.quantityInStock} units are available.`
-        )
-        return
-      }
-
-      setItems((currentItems) =>
+      setOrderItems((currentItems) =>
         currentItems.map((item) =>
-          item.productId === selectedProductId
+          item.productId === selectedProduct.id
             ? {
                 ...item,
-                quantity: newQuantity,
+                quantity:
+                  item.quantity + quantityNumber,
               }
             : item
         )
       )
     } else {
-      setItems((currentItems) => [
+      setOrderItems((currentItems) => [
         ...currentItems,
         {
-          productId: selectedProductId,
-          quantity: selectedQuantity,
+          productId: selectedProduct.id,
+          productName: selectedProduct.name,
+          quantity: quantityNumber,
+          price: Number(selectedProduct.price),
         },
       ])
     }
@@ -122,14 +122,17 @@ function AddOrderForm({
   }
 
   const handleRemoveItem = (productIdToRemove: number) => {
-    setItems((currentItems) =>
+    setOrderItems((currentItems) =>
       currentItems.filter(
-        (item) => item.productId !== productIdToRemove
+        (item) =>
+          item.productId !== productIdToRemove
       )
     )
   }
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault()
     setMessage('')
 
@@ -138,14 +141,15 @@ function AddOrderForm({
       return
     }
 
-    if (items.length === 0) {
+    if (orderItems.length === 0) {
       setMessage('Add at least one product to the order.')
       return
     }
 
-    const response = await fetch(
-      'http://localhost:8080/api/orders',
-      {
+    try {
+      setLoading(true)
+
+      const response = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -154,33 +158,48 @@ function AddOrderForm({
           customer: {
             id: Number(customerId),
           },
-          items: items.map((item) => ({
+          items: orderItems.map((item) => ({
             product: {
               id: item.productId,
             },
             quantity: item.quantity,
           })),
         }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+
+        throw new Error(
+          errorText || 'Unable to create order.'
+        )
       }
-    )
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      setMessage(errorText || 'Unable to create order.')
-      return
+      setCustomerId('')
+      setProductId('')
+      setQuantity('1')
+      setOrderItems([])
+      setMessage('Order created successfully.')
+
+      onOrderAdded()
+    } catch (error) {
+      console.error(error)
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Unable to create order.'
+      )
+    } finally {
+      setLoading(false)
     }
-
-    setCustomerId('')
-    setProductId('')
-    setQuantity('1')
-    setItems([])
-    setMessage('Order created successfully.')
-
-    onOrderAdded()
   }
 
   return (
-    <form className="order-form" onSubmit={handleSubmit}>
+    <form
+      className="order-form"
+      onSubmit={handleSubmit}
+    >
       <h2>Create Order</h2>
 
       <div className="form-grid">
@@ -194,8 +213,12 @@ function AddOrderForm({
           <option value="">Select customer</option>
 
           {customers.map((customer) => (
-            <option key={customer.id} value={customer.id}>
-              {customer.firstName} {customer.lastName}
+            <option
+              key={customer.id}
+              value={customer.id}
+            >
+              {customer.firstName}{' '}
+              {customer.lastName}
             </option>
           ))}
         </select>
@@ -209,8 +232,15 @@ function AddOrderForm({
           <option value="">Select product</option>
 
           {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name} ({product.quantityInStock} in stock)
+            <option
+              key={product.id}
+              value={product.id}
+              disabled={
+                product.quantityInStock <= 0
+              }
+            >
+              {product.name} (
+              {product.quantityInStock} in stock)
             </option>
           ))}
         </select>
@@ -235,11 +265,11 @@ function AddOrderForm({
         </button>
       </div>
 
-      {items.length > 0 && (
-        <div className="order-builder">
+      {orderItems.length > 0 && (
+        <div className="order-items-preview">
           <h3>Order Items</h3>
 
-          <div className="order-builder-header">
+          <div className="order-items-header">
             <span>Product</span>
             <span>Quantity</span>
             <span>Price</span>
@@ -247,61 +277,64 @@ function AddOrderForm({
             <span>Action</span>
           </div>
 
-          {items.map((item) => {
-            const product = products.find(
-              (product) => product.id === item.productId
-            )
+          {orderItems.map((item) => (
+            <div
+              className="order-items-row"
+              key={item.productId}
+            >
+              <span>{item.productName}</span>
 
-            if (!product) {
-              return null
-            }
+              <span>{item.quantity}</span>
 
-            const lineTotal =
-              Number(product.price) * item.quantity
+              <span>
+                ${item.price.toFixed(2)}
+              </span>
 
-            return (
-              <div
-                className="order-builder-row"
-                key={item.productId}
-              >
-                <span>{product.name}</span>
-                <span>{item.quantity}</span>
-                <span>
-                  ${Number(product.price).toFixed(2)}
-                </span>
-                <span>${lineTotal.toFixed(2)}</span>
+              <span>
+                $
+                {(
+                  item.price * item.quantity
+                ).toFixed(2)}
+              </span>
 
-                <span>
-                  <button
-                    type="button"
-                    className="delete-button"
-                    onClick={() =>
-                      handleRemoveItem(item.productId)
-                    }
-                  >
-                    Remove
-                  </button>
-                </span>
-              </div>
-            )
-          })}
+              <span>
+                <button
+                  type="button"
+                  className="delete-button"
+                  onClick={() =>
+                    handleRemoveItem(
+                      item.productId
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </span>
+            </div>
+          ))}
 
-          <div className="order-builder-total">
+          <div className="order-total">
             <span>Order Total</span>
-            <strong>${orderTotal.toFixed(2)}</strong>
+
+            <strong>
+              ${orderTotal.toFixed(2)}
+            </strong>
           </div>
         </div>
       )}
 
       <button
         type="submit"
-        className="primary-button place-order-button"
+        className="primary-button"
+        disabled={loading}
       >
-        Place Order
+        {loading ? 'Placing Order...' : 'Place Order'}
       </button>
 
       {message && (
-        <p className="form-message">{message}</p>
+        <p className="form-message">
+          {message}
+        </p>
       )}
     </form>
   )

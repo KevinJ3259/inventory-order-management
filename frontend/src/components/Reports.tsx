@@ -46,6 +46,9 @@ type ReportsProps = {
   summary: ReportSummary | null
 }
 
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+
 function Reports({ summary }: ReportsProps) {
   const [topSellingProducts, setTopSellingProducts] =
     useState<TopSellingProduct[]>([])
@@ -87,7 +90,7 @@ function Reports({ summary }: ReportsProps) {
         setTopProductsError('')
 
         const response = await fetch(
-          'http://localhost:8080/api/reports/top-selling-products'
+          `${API_BASE}/reports/top-selling-products`
         )
 
         if (!response.ok) {
@@ -118,7 +121,7 @@ function Reports({ summary }: ReportsProps) {
     const loadCustomers = async () => {
       try {
         const response = await fetch(
-          'http://localhost:8080/api/customers'
+          `${API_BASE}/customers`
         )
 
         if (!response.ok) {
@@ -143,7 +146,7 @@ function Reports({ summary }: ReportsProps) {
         setSalesByCustomerError('')
 
         const response = await fetch(
-          'http://localhost:8080/api/reports/sales-by-customer'
+          `${API_BASE}/reports/sales-by-customer`
         )
 
         if (!response.ok) {
@@ -185,7 +188,7 @@ function Reports({ summary }: ReportsProps) {
       setLoadingCustomerOrders(true)
 
       const response = await fetch(
-        `http://localhost:8080/api/reports/customers/${customerId}/orders`
+        `${API_BASE}/reports/customers/${customerId}/orders`
       )
 
       if (!response.ok) {
@@ -374,16 +377,11 @@ function Reports({ summary }: ReportsProps) {
                   </span>
 
                   <span>{customer.orderCount}</span>
-
-                  <span>
-                    {customer.itemsPurchased}
-                  </span>
+                  <span>{customer.itemsPurchased}</span>
 
                   <span>
                     $
-                    {Number(
-                      customer.totalSpent
-                    ).toFixed(2)}
+                    {Number(customer.totalSpent).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -400,14 +398,10 @@ function Reports({ summary }: ReportsProps) {
           <select
             value={selectedCustomerId}
             onChange={(event) =>
-              handleCustomerChange(
-                event.target.value
-              )
+              handleCustomerChange(event.target.value)
             }
           >
-            <option value="">
-              Select customer
-            </option>
+            <option value="">Select customer</option>
 
             {customers.map((customer) => (
               <option
@@ -473,9 +467,7 @@ function Reports({ summary }: ReportsProps) {
 
                   <span>
                     $
-                    {Number(
-                      order.totalAmount
-                    ).toFixed(2)}
+                    {Number(order.totalAmount).toFixed(2)}
                   </span>
                 </div>
               ))}

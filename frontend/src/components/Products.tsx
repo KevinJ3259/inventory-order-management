@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+
 import AddProductForm from './AddProductForm'
 
 type Product = {
@@ -16,9 +17,18 @@ type ProductsProps = {
   onRefresh: () => void
 }
 
-function Products({ products, onRefresh }: ProductsProps) {
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+
+function Products({
+  products,
+  onRefresh,
+}: ProductsProps) {
+  const [editingProduct, setEditingProduct] =
+    useState<Product | null>(null)
+
+  const [searchTerm, setSearchTerm] =
+    useState('')
 
   const filteredProducts = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -35,7 +45,9 @@ function Products({ products, onRefresh }: ProductsProps) {
     })
   }, [products, searchTerm])
 
-  const handleDelete = async (product: Product) => {
+  const handleDelete = async (
+    product: Product
+  ) => {
     const confirmed = window.confirm(
       `Delete ${product.name}? This cannot be undone.`
     )
@@ -45,7 +57,7 @@ function Products({ products, onRefresh }: ProductsProps) {
     }
 
     const response = await fetch(
-      `http://localhost:8080/api/products/${product.id}`,
+      `${API_BASE}/products/${product.id}`,
       {
         method: 'DELETE',
       }
@@ -60,9 +72,13 @@ function Products({ products, onRefresh }: ProductsProps) {
   }
 
   const handleEditChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement
+    >
   ) => {
-    if (!editingProduct) return
+    if (!editingProduct) {
+      return
+    }
 
     const { name, value } = event.target
 
@@ -77,13 +93,17 @@ function Products({ products, onRefresh }: ProductsProps) {
     })
   }
 
-  const handleUpdate = async (event: React.FormEvent) => {
+  const handleUpdate = async (
+    event: React.FormEvent
+  ) => {
     event.preventDefault()
 
-    if (!editingProduct) return
+    if (!editingProduct) {
+      return
+    }
 
     const response = await fetch(
-      `http://localhost:8080/api/products/${editingProduct.id}`,
+      `${API_BASE}/products/${editingProduct.id}`,
       {
         method: 'PUT',
         headers: {
@@ -105,12 +125,17 @@ function Products({ products, onRefresh }: ProductsProps) {
   return (
     <div className="products-page">
       <section className="panel">
-        <AddProductForm onProductAdded={onRefresh} />
+        <AddProductForm
+          onProductAdded={onRefresh}
+        />
       </section>
 
       {editingProduct && (
         <section className="panel">
-          <form className="product-form" onSubmit={handleUpdate}>
+          <form
+            className="product-form"
+            onSubmit={handleUpdate}
+          >
             <h2>Edit Product</h2>
 
             <div className="form-grid">
@@ -142,7 +167,9 @@ function Products({ products, onRefresh }: ProductsProps) {
                 name="quantityInStock"
                 type="number"
                 min="0"
-                value={editingProduct.quantityInStock}
+                value={
+                  editingProduct.quantityInStock
+                }
                 onChange={handleEditChange}
                 required
               />
@@ -151,27 +178,36 @@ function Products({ products, onRefresh }: ProductsProps) {
                 name="reorderLevel"
                 type="number"
                 min="0"
-                value={editingProduct.reorderLevel}
+                value={
+                  editingProduct.reorderLevel
+                }
                 onChange={handleEditChange}
                 required
               />
 
               <textarea
                 name="description"
-                value={editingProduct.description ?? ''}
+                value={
+                  editingProduct.description ?? ''
+                }
                 onChange={handleEditChange}
               />
             </div>
 
             <div className="edit-actions">
-              <button type="submit" className="primary-button">
+              <button
+                type="submit"
+                className="primary-button"
+              >
                 Save Changes
               </button>
 
               <button
                 type="button"
                 className="cancel-button"
-                onClick={() => setEditingProduct(null)}
+                onClick={() =>
+                  setEditingProduct(null)
+                }
               >
                 Cancel
               </button>
@@ -190,7 +226,9 @@ function Products({ products, onRefresh }: ProductsProps) {
             type="search"
             placeholder="Search by product name or SKU..."
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) =>
+              setSearchTerm(event.target.value)
+            }
           />
         </div>
 
@@ -207,33 +245,57 @@ function Products({ products, onRefresh }: ProductsProps) {
               <span>Actions</span>
             </div>
 
-            {filteredProducts.map((product) => (
-              <div className="products-table-row" key={product.id}>
-                <span>{product.name}</span>
-                <span>{product.sku}</span>
-                <span>${Number(product.price).toFixed(2)}</span>
-                <span>{product.quantityInStock}</span>
-                <span>{product.reorderLevel}</span>
+            {filteredProducts.map(
+              (product) => (
+                <div
+                  className="products-table-row"
+                  key={product.id}
+                >
+                  <span>{product.name}</span>
 
-                <span className="action-buttons">
-                  <button
-                    type="button"
-                    className="edit-button"
-                    onClick={() => setEditingProduct(product)}
-                  >
-                    Edit
-                  </button>
+                  <span>{product.sku}</span>
 
-                  <button
-                    type="button"
-                    className="delete-button"
-                    onClick={() => handleDelete(product)}
-                  >
-                    Delete
-                  </button>
-                </span>
-              </div>
-            ))}
+                  <span>
+                    $
+                    {Number(
+                      product.price
+                    ).toFixed(2)}
+                  </span>
+
+                  <span>
+                    {product.quantityInStock}
+                  </span>
+
+                  <span>
+                    {product.reorderLevel}
+                  </span>
+
+                  <span className="action-buttons">
+                    <button
+                      type="button"
+                      className="edit-button"
+                      onClick={() =>
+                        setEditingProduct(
+                          product
+                        )
+                      }
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      className="delete-button"
+                      onClick={() =>
+                        handleDelete(product)
+                      }
+                    >
+                      Delete
+                    </button>
+                  </span>
+                </div>
+              )
+            )}
           </div>
         )}
       </section>

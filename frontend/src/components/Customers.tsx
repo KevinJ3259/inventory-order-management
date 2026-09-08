@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+
 import AddCustomerForm from './AddCustomerForm'
 
 type Customer = {
@@ -14,11 +15,18 @@ type CustomersProps = {
   onRefresh: () => void
 }
 
-function Customers({ customers, onRefresh }: CustomersProps) {
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+
+function Customers({
+  customers,
+  onRefresh,
+}: CustomersProps) {
   const [editingCustomer, setEditingCustomer] =
     useState<Customer | null>(null)
 
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] =
+    useState('')
 
   const filteredCustomers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
@@ -33,15 +41,17 @@ function Customers({ customers, onRefresh }: CustomersProps) {
 
       return (
         fullName.includes(query) ||
-        customer.firstName.toLowerCase().includes(query) ||
-        customer.lastName.toLowerCase().includes(query) ||
         customer.email.toLowerCase().includes(query) ||
-        (customer.phone ?? '').toLowerCase().includes(query)
+        (customer.phone ?? '')
+          .toLowerCase()
+          .includes(query)
       )
     })
   }, [customers, searchTerm])
 
-  const handleDelete = async (customer: Customer) => {
+  const handleDelete = async (
+    customer: Customer
+  ) => {
     const confirmed = window.confirm(
       `Delete ${customer.firstName} ${customer.lastName}? This cannot be undone.`
     )
@@ -51,7 +61,7 @@ function Customers({ customers, onRefresh }: CustomersProps) {
     }
 
     const response = await fetch(
-      `http://localhost:8080/api/customers/${customer.id}`,
+      `${API_BASE}/customers/${customer.id}`,
       {
         method: 'DELETE',
       }
@@ -68,7 +78,9 @@ function Customers({ customers, onRefresh }: CustomersProps) {
   const handleEditChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    if (!editingCustomer) return
+    if (!editingCustomer) {
+      return
+    }
 
     const { name, value } = event.target
 
@@ -78,13 +90,17 @@ function Customers({ customers, onRefresh }: CustomersProps) {
     })
   }
 
-  const handleUpdate = async (event: React.FormEvent) => {
+  const handleUpdate = async (
+    event: React.FormEvent
+  ) => {
     event.preventDefault()
 
-    if (!editingCustomer) return
+    if (!editingCustomer) {
+      return
+    }
 
     const response = await fetch(
-      `http://localhost:8080/api/customers/${editingCustomer.id}`,
+      `${API_BASE}/customers/${editingCustomer.id}`,
       {
         method: 'PUT',
         headers: {
@@ -106,12 +122,17 @@ function Customers({ customers, onRefresh }: CustomersProps) {
   return (
     <div className="customers-page">
       <section className="panel">
-        <AddCustomerForm onCustomerAdded={onRefresh} />
+        <AddCustomerForm
+          onCustomerAdded={() => onRefresh()}
+        />
       </section>
 
       {editingCustomer && (
         <section className="panel">
-          <form className="customer-form" onSubmit={handleUpdate}>
+          <form
+            className="customer-form"
+            onSubmit={handleUpdate}
+          >
             <h2>Edit Customer</h2>
 
             <div className="form-grid">
@@ -145,14 +166,19 @@ function Customers({ customers, onRefresh }: CustomersProps) {
             </div>
 
             <div className="edit-actions">
-              <button type="submit" className="primary-button">
+              <button
+                type="submit"
+                className="primary-button"
+              >
                 Save Changes
               </button>
 
               <button
                 type="button"
                 className="cancel-button"
-                onClick={() => setEditingCustomer(null)}
+                onClick={() =>
+                  setEditingCustomer(null)
+                }
               >
                 Cancel
               </button>
@@ -169,9 +195,11 @@ function Customers({ customers, onRefresh }: CustomersProps) {
         <div className="search-bar">
           <input
             type="search"
-            placeholder="Search by name, email, or phone..."
+            placeholder="Search by customer name, email, or phone..."
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) =>
+              setSearchTerm(event.target.value)
+            }
           />
         </div>
 
@@ -186,34 +214,47 @@ function Customers({ customers, onRefresh }: CustomersProps) {
               <span>Actions</span>
             </div>
 
-            {filteredCustomers.map((customer) => (
-              <div className="customers-table-row" key={customer.id}>
-                <span>
-                  {customer.firstName} {customer.lastName}
-                </span>
+            {filteredCustomers.map(
+              (customer) => (
+                <div
+                  className="customers-table-row"
+                  key={customer.id}
+                >
+                  <span>
+                    {customer.firstName}{' '}
+                    {customer.lastName}
+                  </span>
 
-                <span>{customer.email}</span>
-                <span>{customer.phone}</span>
+                  <span>{customer.email}</span>
 
-                <span className="action-buttons">
-                  <button
-                    type="button"
-                    className="edit-button"
-                    onClick={() => setEditingCustomer(customer)}
-                  >
-                    Edit
-                  </button>
+                  <span>{customer.phone}</span>
 
-                  <button
-                    type="button"
-                    className="delete-button"
-                    onClick={() => handleDelete(customer)}
-                  >
-                    Delete
-                  </button>
-                </span>
-              </div>
-            ))}
+                  <span className="action-buttons">
+                    <button
+                      type="button"
+                      className="edit-button"
+                      onClick={() =>
+                        setEditingCustomer(
+                          customer
+                        )
+                      }
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      className="delete-button"
+                      onClick={() =>
+                        handleDelete(customer)
+                      }
+                    >
+                      Delete
+                    </button>
+                  </span>
+                </div>
+              )
+            )}
           </div>
         )}
       </section>

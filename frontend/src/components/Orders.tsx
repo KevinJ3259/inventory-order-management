@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+
 import AddOrderForm from './AddOrderForm'
 
 type Customer = {
@@ -49,6 +50,9 @@ const ORDER_STATUSES = [
   'CANCELLED',
 ]
 
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+
 function Orders({
   orders,
   customers,
@@ -56,6 +60,7 @@ function Orders({
   onRefresh,
 }: OrdersProps) {
   const [searchTerm, setSearchTerm] = useState('')
+
   const [expandedOrderId, setExpandedOrderId] =
     useState<number | null>(null)
 
@@ -95,7 +100,7 @@ function Orders({
       setUpdatingOrderId(orderId)
 
       const response = await fetch(
-        `http://localhost:8080/api/orders/${orderId}/status`,
+        `${API_BASE}/orders/${orderId}/status`,
         {
           method: 'PUT',
           headers: {
@@ -141,7 +146,9 @@ function Orders({
             type="search"
             placeholder="Search by order number, customer, or status..."
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) =>
+              setSearchTerm(event.target.value)
+            }
           />
         </div>
 
@@ -150,7 +157,10 @@ function Orders({
         ) : (
           <div className="orders-list">
             {filteredOrders.map((order) => (
-              <div className="order-card" key={order.id}>
+              <div
+                className="order-card"
+                key={order.id}
+              >
                 <div className="orders-table-row">
                   <span>#{order.id}</span>
 
@@ -163,7 +173,9 @@ function Orders({
                     <select
                       className="status-select"
                       value={order.status}
-                      disabled={updatingOrderId === order.id}
+                      disabled={
+                        updatingOrderId === order.id
+                      }
                       onChange={(event) =>
                         handleStatusChange(
                           order.id,
@@ -172,7 +184,10 @@ function Orders({
                       }
                     >
                       {ORDER_STATUSES.map((status) => (
-                        <option key={status} value={status}>
+                        <option
+                          key={status}
+                          value={status}
+                        >
                           {status}
                         </option>
                       ))}
@@ -180,16 +195,23 @@ function Orders({
                   </span>
 
                   <span>
-                    ${Number(order.totalAmount).toFixed(2)}
+                    $
+                    {Number(
+                      order.totalAmount
+                    ).toFixed(2)}
                   </span>
 
-                  <span>{order.items?.length ?? 0}</span>
+                  <span>
+                    {order.items?.length ?? 0}
+                  </span>
 
                   <span>
                     <button
                       type="button"
                       className="edit-button"
-                      onClick={() => toggleOrderDetails(order.id)}
+                      onClick={() =>
+                        toggleOrderDetails(order.id)
+                      }
                     >
                       {expandedOrderId === order.id
                         ? 'Hide'
@@ -200,11 +222,15 @@ function Orders({
 
                 {expandedOrderId === order.id && (
                   <div className="order-details">
-                    <h3>Order #{order.id} Details</h3>
+                    <h3>
+                      Order #{order.id} Details
+                    </h3>
 
                     {order.orderDate && (
                       <p>
-                        <strong>Order Date:</strong>{' '}
+                        <strong>
+                          Order Date:
+                        </strong>{' '}
                         {new Date(
                           order.orderDate
                         ).toLocaleString()}
@@ -232,16 +258,30 @@ function Orders({
                           className="order-items-row"
                           key={item.id}
                         >
-                          <span>{item.product.name}</span>
-                          <span>{item.product.sku}</span>
-                          <span>{item.quantity}</span>
-
                           <span>
-                            ${Number(item.unitPrice).toFixed(2)}
+                            {item.product.name}
                           </span>
 
                           <span>
-                            ${Number(item.lineTotal).toFixed(2)}
+                            {item.product.sku}
+                          </span>
+
+                          <span>
+                            {item.quantity}
+                          </span>
+
+                          <span>
+                            $
+                            {Number(
+                              item.unitPrice
+                            ).toFixed(2)}
+                          </span>
+
+                          <span>
+                            $
+                            {Number(
+                              item.lineTotal
+                            ).toFixed(2)}
                           </span>
                         </div>
                       ))}
