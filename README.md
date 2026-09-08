@@ -164,3 +164,21 @@ The project demonstrates experience with:
 - Frontend/backend integration
 - Inventory and order-management business logic
 - Reporting and analytics
+
+## Screenshots
+
+### Dashboard
+
+![InventoryPro Dashboard](screenshots/dashboard.png)
+
+### Products
+
+![InventoryPro Products](screenshots/products.png)
+
+### Orders
+
+![InventoryPro Orders](screenshots/orders.png)
+
+### Reports & Database Queries
+
+![InventoryPro Reports](screenshots/reports.png)
