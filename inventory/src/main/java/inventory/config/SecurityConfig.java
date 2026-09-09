@@ -39,7 +39,9 @@ public class SecurityConfig {
                 CorsConfiguration configuration = new CorsConfiguration();
 
                 configuration.setAllowedOrigins(
-                                List.of("http://localhost:5173"));
+                                List.of(
+                                                "http://localhost:5173",
+                                                "https://inventory-order-management-1-z7kr.onrender.com"));
 
                 configuration.setAllowedMethods(
                                 List.of(
@@ -49,8 +51,7 @@ public class SecurityConfig {
                                                 "DELETE",
                                                 "OPTIONS"));
 
-                configuration.setAllowedHeaders(
-                                List.of("*"));
+                configuration.setAllowedHeaders(List.of("*"));
 
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
