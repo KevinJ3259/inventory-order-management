@@ -1,71 +1,65 @@
 # InventoryPro
 
-InventoryPro is a full-stack Inventory & Order Management System built with Java, Spring Boot, React, TypeScript, PostgreSQL, and REST APIs.
+InventoryPro is a full-stack Inventory & Order Management System built with **Java, Spring Boot, React, TypeScript, PostgreSQL, and JWT authentication**.
 
-The application helps businesses manage products, customers, orders, inventory levels, and sales reporting through a responsive dashboard.
+The application provides businesses with a centralized system for managing products, customers, orders, inventory levels, and sales reporting through a responsive web dashboard.
 
 ## Features
 
+### Authentication & Security
+
+- User registration and login
+- JWT-based authentication
+- BCrypt password hashing
+- Protected backend API endpoints
+- Authorization headers for authenticated requests
+- Spring Security configuration
+- CORS configuration for frontend/backend communication
+
 ### Inventory Management
 
-- Product inventory management
-- Product CRUD operations
-- Inventory quantity tracking
+- Add, edit, and delete products
+- Product search and filtering
+- Track inventory quantities
+- Track product pricing
+- Configure reorder levels
 - Automatic inventory reduction when orders are placed
 - Low-stock and reorder alerts
-- Product search and filtering
-- Inventory value tracking
+- Inventory value calculations
 
 ### Customer Management
 
-- Customer management
-- Customer contact information
-- Customer order history
-- Sales totals by customer
+- Add, edit, and delete customers
+- Store customer contact information
+- Track customer orders
+- View customer purchase history
+- Calculate sales totals by customer
 
 ### Order Management
 
-- Multi-item order creation
-- Order tracking
+- Create customer orders
+- Add products and quantities to orders
+- Multi-item order support
+- Automatic order total calculations
+- Line-item price calculations
 - Order status management
-- Order totals and line-item calculations
-- Customer-specific order history
-- Automatic stock updates after orders are placed
+- Order detail views
+- Automatic inventory updates after orders are placed
+- Search orders by customer, order number, or status
 
 ### Reporting & Analytics
 
-- Reporting dashboard
-- Total revenue reporting
-- Total order and product metrics
+- Total revenue
+- Total orders
+- Total products
+- Low-stock product count
+- Inventory value
 - Orders grouped by status
 - Top-selling products
-- Units-sold calculations
+- Units sold by product
 - Revenue by product
 - Sales by customer
-- Customer purchase history
-- Low-stock reporting
-
-### Database & API
-
-- PostgreSQL relational database
-- Spring Data JPA repositories
-- Custom JPA/JPQL database queries
-- Derived repository queries
-- Aggregate queries using SUM and COUNT
-- GROUP BY and ORDER BY reporting queries
-- REST API architecture
-- Input validation
-- Spring Security configuration
-- CORS configuration for React/Spring Boot integration
-
-### User Interface
-
-- Responsive React dashboard
-- Product management interface
-- Customer management interface
-- Order management interface
-- Reorder alert interface
-- Reporting and analytics interface
+- Customer order history
 
 ## Tech Stack
 
@@ -73,9 +67,11 @@ The application helps businesses manage products, customers, orders, inventory l
 
 - Java 21
 - Spring Boot
+- Spring Security
 - Spring Data JPA
 - Hibernate
-- Spring Security
+- JWT
+- BCrypt
 - PostgreSQL
 - Maven
 - REST APIs
@@ -88,47 +84,64 @@ The application helps businesses manage products, customers, orders, inventory l
 - CSS
 - Fetch API
 
+### Database
+
+- PostgreSQL
+- Spring Data JPA repositories
+- Derived repository queries
+- Custom JPQL queries
+- Aggregate queries
+- Relational entity relationships
+
+### Deployment
+
+- Render
+- Neon PostgreSQL
+- GitHub
+
 ## Database Query Features
 
 InventoryPro demonstrates database querying beyond basic CRUD operations.
 
-Examples include:
+The application uses Spring Data JPA, derived repository methods, and custom JPQL queries for reporting and analytics.
+
+Database operations include:
 
 - Finding orders by customer
 - Filtering orders by status
+- Calculating total revenue
 - Calculating top-selling products
 - Aggregating units sold
 - Calculating revenue by product
 - Calculating sales by customer
 - Counting customer orders
 - Calculating total items purchased
+- Identifying low-stock products
 - Grouping and sorting sales data
 
-The reporting system uses Spring Data JPA, derived repository methods, and custom JPQL queries with joins, `SUM`, `COUNT`, `GROUP BY`, and `ORDER BY`.
-
-## Reporting Dashboard
-
-The reporting dashboard provides business insights including:
-
-- Total Revenue
-- Total Orders
-- Total Products
-- Low Stock Products
-- Orders by Status
-- Top Selling Products
-- Customer Order History
-- Sales by Customer
-
-## Project Structure
+Query techniques demonstrated include:
 
 ```text
-inventory-order-management
-├── inventory
-│   └── Spring Boot backend
-├── frontend
-│   └── React + TypeScript frontend
-└── README.md
+SUM
+COUNT
+JOIN
+GROUP BY
+ORDER BY
 ```
+
+## Authentication
+
+InventoryPro uses JWT-based authentication to protect application data and backend API endpoints.
+
+When a user successfully logs in, the backend generates a JWT token.
+
+The frontend stores the token and includes it with authenticated API requests:
+
+```text
+Authorization: Bearer <JWT_TOKEN>
+```
+
+Passwords are hashed using BCrypt before being stored in the database.
 
 ## Architecture
 
@@ -136,34 +149,39 @@ InventoryPro follows a layered full-stack architecture:
 
 ```text
 React + TypeScript Frontend
-          ↓
-       REST API
-          ↓
-Spring Boot Controllers
-          ↓
-      Services
-          ↓
-Spring Data JPA Repositories
-          ↓
-     PostgreSQL
+            ↓
+         REST API
+            ↓
+      Spring Security
+            ↓
+   Spring Boot Controllers
+            ↓
+         Services
+            ↓
+ Spring Data JPA Repositories
+            ↓
+        PostgreSQL
 ```
 
-## Purpose
+## Project Structure
 
-InventoryPro was developed as a portfolio project demonstrating full-stack software engineering with Java and modern web technologies.
-
-The project demonstrates experience with:
-
-- Object-oriented Java development
-- Spring Boot application development
-- REST API design
-- Relational database design
-- Database querying and aggregation
-- Spring Data JPA and Hibernate
-- React and TypeScript development
-- Frontend/backend integration
-- Inventory and order-management business logic
-- Reporting and analytics
+```text
+inventory-order-management
+│
+├── inventory
+│   └── Spring Boot backend
+│
+├── frontend
+│   └── React + TypeScript frontend
+│
+├── screenshots
+│   ├── dashboard.png
+│   ├── products.png
+│   ├── orders.png
+│   └── reports.png
+│
+└── README.md
+```
 
 ## Screenshots
 
@@ -171,14 +189,58 @@ The project demonstrates experience with:
 
 ![InventoryPro Dashboard](screenshots/dashboard.png)
 
-### Products
+### Product Management
 
 ![InventoryPro Products](screenshots/products.png)
 
-### Orders
+### Order Management
 
 ![InventoryPro Orders](screenshots/orders.png)
 
 ### Reports & Database Queries
 
 ![InventoryPro Reports](screenshots/reports.png)
+
+## Production Deployment
+
+InventoryPro is deployed as a full-stack production application.
+
+The production environment uses:
+
+- **Render** for application hosting
+- **Neon PostgreSQL** for the production database
+- **GitHub** for source control and deployment integration
+
+## Skills Demonstrated
+
+InventoryPro demonstrates practical experience with:
+
+- Java development
+- Object-oriented programming
+- Spring Boot
+- Spring Security
+- JWT authentication
+- REST API development
+- PostgreSQL
+- Relational database design
+- SQL concepts
+- Spring Data JPA
+- Hibernate
+- JPQL database queries
+- Database aggregation and reporting
+- React
+- TypeScript
+- Frontend/backend integration
+- Authentication and authorization
+- Inventory management business logic
+- Order management business logic
+- Reporting and analytics
+- Responsive web development
+- Git and GitHub
+- Full-stack production deployment
+
+## Purpose
+
+InventoryPro was developed as a portfolio project to demonstrate full-stack software engineering using Java and modern web technologies.
+
+The project combines frontend development, backend API development, authentication, relational database management, business logic, database querying, reporting, and cloud deployment into a complete production application.
