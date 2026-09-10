@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
-
+import { useState } from 'react'
 import AddCustomerForm from './AddCustomerForm'
+import { apiFetch } from '../api'
 
 type Customer = {
   id: number
@@ -15,43 +15,11 @@ type CustomersProps = {
   onRefresh: () => void
 }
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-
-function Customers({
-  customers,
-  onRefresh,
-}: CustomersProps) {
+function Customers({ customers, onRefresh }: CustomersProps) {
   const [editingCustomer, setEditingCustomer] =
     useState<Customer | null>(null)
 
-  const [searchTerm, setSearchTerm] =
-    useState('')
-
-  const filteredCustomers = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
-
-    if (!query) {
-      return customers
-    }
-
-    return customers.filter((customer) => {
-      const fullName =
-        `${customer.firstName} ${customer.lastName}`.toLowerCase()
-
-      return (
-        fullName.includes(query) ||
-        customer.email.toLowerCase().includes(query) ||
-        (customer.phone ?? '')
-          .toLowerCase()
-          .includes(query)
-      )
-    })
-  }, [customers, searchTerm])
-
-  const handleDelete = async (
-    customer: Customer
-  ) => {
+  const handleDelete = async (customer: Customer) => {
     const confirmed = window.confirm(
       `Delete ${customer.firstName} ${customer.lastName}? This cannot be undone.`
     )
@@ -60,8 +28,8 @@ function Customers({
       return
     }
 
-    const response = await fetch(
-      `${API_BASE}/customers/${customer.id}`,
+    const response = await apiFetch(
+      `/customers/${customer.id}`,
       {
         method: 'DELETE',
       }
@@ -78,9 +46,7 @@ function Customers({
   const handleEditChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    if (!editingCustomer) {
-      return
-    }
+    if (!editingCustomer) return
 
     const { name, value } = event.target
 
@@ -95,17 +61,12 @@ function Customers({
   ) => {
     event.preventDefault()
 
-    if (!editingCustomer) {
-      return
-    }
+    if (!editingCustomer) return
 
-    const response = await fetch(
-      `${API_BASE}/customers/${editingCustomer.id}`,
+    const response = await apiFetch(
+      `/customers/${editingCustomer.id}`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(editingCustomer),
       }
     )
@@ -123,7 +84,7 @@ function Customers({
     <div className="customers-page">
       <section className="panel">
         <AddCustomerForm
-          onCustomerAdded={() => onRefresh()}
+          onCustomerAdded={onRefresh}
         />
       </section>
 
@@ -192,19 +153,8 @@ function Customers({
           <h2>Customers</h2>
         </div>
 
-        <div className="search-bar">
-          <input
-            type="search"
-            placeholder="Search by customer name, email, or phone..."
-            value={searchTerm}
-            onChange={(event) =>
-              setSearchTerm(event.target.value)
-            }
-          />
-        </div>
-
-        {filteredCustomers.length === 0 ? (
-          <p>No matching customers found.</p>
+        {customers.length === 0 ? (
+          <p>No customers found.</p>
         ) : (
           <div className="customers-table">
             <div className="customers-table-header">
@@ -214,47 +164,42 @@ function Customers({
               <span>Actions</span>
             </div>
 
-            {filteredCustomers.map(
-              (customer) => (
-                <div
-                  className="customers-table-row"
-                  key={customer.id}
-                >
-                  <span>
-                    {customer.firstName}{' '}
-                    {customer.lastName}
-                  </span>
+            {customers.map((customer) => (
+              <div
+                className="customers-table-row"
+                key={customer.id}
+              >
+                <span>
+                  {customer.firstName}{' '}
+                  {customer.lastName}
+                </span>
 
-                  <span>{customer.email}</span>
+                <span>{customer.email}</span>
+                <span>{customer.phone}</span>
 
-                  <span>{customer.phone}</span>
+                <span className="action-buttons">
+                  <button
+                    type="button"
+                    className="edit-button"
+                    onClick={() =>
+                      setEditingCustomer(customer)
+                    }
+                  >
+                    Edit
+                  </button>
 
-                  <span className="action-buttons">
-                    <button
-                      type="button"
-                      className="edit-button"
-                      onClick={() =>
-                        setEditingCustomer(
-                          customer
-                        )
-                      }
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      className="delete-button"
-                      onClick={() =>
-                        handleDelete(customer)
-                      }
-                    >
-                      Delete
-                    </button>
-                  </span>
-                </div>
-              )
-            )}
+                  <button
+                    type="button"
+                    className="delete-button"
+                    onClick={() =>
+                      handleDelete(customer)
+                    }
+                  >
+                    Delete
+                  </button>
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </section>

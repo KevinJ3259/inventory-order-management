@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-
 import AddOrderForm from './AddOrderForm'
+import { apiFetch } from '../api'
 
 type Customer = {
   id: number
@@ -50,9 +50,6 @@ const ORDER_STATUSES = [
   'CANCELLED',
 ]
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-
 function Orders({
   orders,
   customers,
@@ -60,10 +57,8 @@ function Orders({
   onRefresh,
 }: OrdersProps) {
   const [searchTerm, setSearchTerm] = useState('')
-
   const [expandedOrderId, setExpandedOrderId] =
     useState<number | null>(null)
-
   const [updatingOrderId, setUpdatingOrderId] =
     useState<number | null>(null)
 
@@ -99,13 +94,10 @@ function Orders({
     try {
       setUpdatingOrderId(orderId)
 
-      const response = await fetch(
-        `${API_BASE}/orders/${orderId}/status`,
+      const response = await apiFetch(
+        `/orders/${orderId}/status`,
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify({
             status: newStatus,
           }),

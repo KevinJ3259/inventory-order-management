@@ -6,6 +6,7 @@ import Customers from './components/Customers'
 import Orders from './components/Orders'
 import ReorderAlerts from './components/ReorderAlerts'
 import Reports from './components/Reports'
+import Login from './components/Login'
 
 type Product = {
   id: number
@@ -68,6 +69,14 @@ const API_BASE =
 function App() {
   const [activeView, setActiveView] = useState<View>('dashboard')
 
+  const [token, setToken] = useState(
+    () => localStorage.getItem('inventory_token') || ''
+  )
+
+  const [userName, setUserName] = useState(
+    () => localStorage.getItem('inventory_user') || ''
+  )
+
   const [products, setProducts] = useState<Product[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [orders, setOrders] = useState<Order[]>([])
@@ -76,13 +85,39 @@ function App() {
   const [reportSummary, setReportSummary] =
     useState<ReportSummary | null>(null)
 
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('inventory_token')
+    localStorage.removeItem('inventory_user')
+
+    setToken('')
+    setUserName('')
+    setProducts([])
+    setCustomers([])
+    setOrders([])
+    setReorderAlerts([])
+    setReportSummary(null)
+    setActiveView('dashboard')
+    setError('')
+    setLoading(false)
+  }, [])
+
   const loadData = useCallback(async () => {
+    if (!token) {
+      return
+    }
+
     try {
       setLoading(true)
       setError('')
+
+      const requestOptions: RequestInit = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
 
       const [
         productsResponse,
@@ -91,12 +126,28 @@ function App() {
         alertsResponse,
         reportsResponse,
       ] = await Promise.all([
-        fetch(`${API_BASE}/products`),
-        fetch(`${API_BASE}/customers`),
-        fetch(`${API_BASE}/orders`),
-        fetch(`${API_BASE}/products/reorder-alerts`),
-        fetch(`${API_BASE}/reports/summary`),
+        fetch(`${API_BASE}/products`, requestOptions),
+        fetch(`${API_BASE}/customers`, requestOptions),
+        fetch(`${API_BASE}/orders`, requestOptions),
+        fetch(`${API_BASE}/products/reorder-alerts`, requestOptions),
+        fetch(`${API_BASE}/reports/summary`, requestOptions),
       ])
+
+      if (
+        productsResponse.status === 401 ||
+        productsResponse.status === 403 ||
+        customersResponse.status === 401 ||
+        customersResponse.status === 403 ||
+        ordersResponse.status === 401 ||
+        ordersResponse.status === 403 ||
+        alertsResponse.status === 401 ||
+        alertsResponse.status === 403 ||
+        reportsResponse.status === 401 ||
+        reportsResponse.status === 403
+      ) {
+        handleLogout()
+        return
+      }
 
       if (
         !productsResponse.ok ||
@@ -132,16 +183,27 @@ function App() {
       console.error(err)
 
       setError(
-        'Unable to connect to the backend. Make sure Spring Boot is running on port 8080.'
+        'Unable to connect to the backend. Please try again.'
       )
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [token, handleLogout])
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (token) {
+      loadData()
+    }
+  }, [token, loadData])
+
+  const handleLogin = (
+    newToken: string,
+    newUserName: string
+  ) => {
+    setToken(newToken)
+    setUserName(newUserName)
+    setActiveView('dashboard')
+  }
 
   const recentOrder =
     orders.length > 0 ? orders[orders.length - 1] : null
@@ -153,10 +215,20 @@ function App() {
     0
   )
 
+  if (!token) {
+    return <Login onLogin={handleLogin} />
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">InventoryPro</div>
+
+        {userName && (
+          <div className="sidebar-user">
+            Signed in as <strong>{userName}</strong>
+          </div>
+        )}
 
         <nav className="nav-menu">
           <button
@@ -213,6 +285,13 @@ function App() {
             onClick={() => setActiveView('reports')}
           >
             Reports
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+          >
+            Logout
           </button>
         </nav>
       </aside>

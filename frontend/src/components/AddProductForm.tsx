@@ -1,173 +1,141 @@
 import { useState } from 'react'
+import { apiFetch } from '../api'
+
+type ProductFormData = {
+  name: string
+  sku: string
+  description: string
+  price: string
+  quantityInStock: string
+  reorderLevel: string
+}
 
 type AddProductFormProps = {
   onProductAdded: () => void
 }
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
+function AddProductForm({ onProductAdded }: AddProductFormProps) {
+  const [formData, setFormData] = useState<ProductFormData>({
+    name: '',
+    sku: '',
+    description: '',
+    price: '',
+    quantityInStock: '',
+    reorderLevel: '',
+  })
 
-function AddProductForm({
-  onProductAdded,
-}: AddProductFormProps) {
-  const [name, setName] = useState('')
-  const [sku, setSku] = useState('')
-  const [price, setPrice] = useState('')
-  const [quantityInStock, setQuantityInStock] =
-    useState('')
-  const [reorderLevel, setReorderLevel] =
-    useState('')
-  const [description, setDescription] =
-    useState('')
   const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
+    const { name, value } = event.target
+
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }))
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setMessage('')
 
-    try {
-      setLoading(true)
+    const response = await apiFetch('/products', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: formData.name,
+        sku: formData.sku,
+        description: formData.description,
+        price: Number(formData.price),
+        quantityInStock: Number(formData.quantityInStock),
+        reorderLevel: Number(formData.reorderLevel),
+      }),
+    })
 
-      const response = await fetch(`${API_BASE}/products`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          sku,
-          description,
-          price: Number(price),
-          quantityInStock: Number(quantityInStock),
-          reorderLevel: Number(reorderLevel),
-        }),
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-
-        throw new Error(
-          errorText || 'Unable to add product.'
-        )
-      }
-
-      setName('')
-      setSku('')
-      setPrice('')
-      setQuantityInStock('')
-      setReorderLevel('')
-      setDescription('')
-      setMessage('Product added successfully.')
-
-      onProductAdded()
-    } catch (error) {
-      console.error(error)
-
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to add product.'
-      )
-    } finally {
-      setLoading(false)
+    if (!response.ok) {
+      setMessage('Unable to add product.')
+      return
     }
+
+    setFormData({
+      name: '',
+      sku: '',
+      description: '',
+      price: '',
+      quantityInStock: '',
+      reorderLevel: '',
+    })
+
+    setMessage('Product added successfully.')
+    onProductAdded()
   }
 
   return (
-    <form
-      className="product-form"
-      onSubmit={handleSubmit}
-    >
+    <form className="product-form" onSubmit={handleSubmit}>
       <h2>Add Product</h2>
 
       <div className="form-grid">
         <input
-          type="text"
+          name="name"
           placeholder="Product name"
-          value={name}
-          onChange={(event) =>
-            setName(event.target.value)
-          }
+          value={formData.name}
+          onChange={handleChange}
           required
         />
 
         <input
-          type="text"
+          name="sku"
           placeholder="SKU"
-          value={sku}
-          onChange={(event) =>
-            setSku(event.target.value)
-          }
+          value={formData.sku}
+          onChange={handleChange}
           required
         />
 
         <input
+          name="price"
           type="number"
           step="0.01"
           min="0.01"
           placeholder="Price"
-          value={price}
-          onChange={(event) =>
-            setPrice(event.target.value)
-          }
+          value={formData.price}
+          onChange={handleChange}
           required
         />
 
         <input
+          name="quantityInStock"
           type="number"
           min="0"
           placeholder="Quantity in stock"
-          value={quantityInStock}
-          onChange={(event) =>
-            setQuantityInStock(
-              event.target.value
-            )
-          }
+          value={formData.quantityInStock}
+          onChange={handleChange}
           required
         />
 
         <input
+          name="reorderLevel"
           type="number"
           min="0"
           placeholder="Reorder level"
-          value={reorderLevel}
-          onChange={(event) =>
-            setReorderLevel(
-              event.target.value
-            )
-          }
+          value={formData.reorderLevel}
+          onChange={handleChange}
           required
         />
 
         <textarea
+          name="description"
           placeholder="Description"
-          value={description}
-          onChange={(event) =>
-            setDescription(
-              event.target.value
-            )
-          }
+          value={formData.description}
+          onChange={handleChange}
         />
       </div>
 
-      <button
-        type="submit"
-        className="primary-button"
-        disabled={loading}
-      >
-        {loading
-          ? 'Adding Product...'
-          : 'Add Product'}
+      <button type="submit" className="primary-button">
+        Add Product
       </button>
 
-      {message && (
-        <p className="form-message">
-          {message}
-        </p>
-      )}
+      {message && <p className="form-message">{message}</p>}
     </form>
   )
 }

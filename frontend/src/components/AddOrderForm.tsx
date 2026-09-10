@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
+import { apiFetch } from '../api'
 
 type Customer = {
   id: number
@@ -13,11 +14,11 @@ type Product = {
   quantityInStock: number
 }
 
-type OrderItemDraft = {
+type OrderItemInput = {
   productId: number
   productName: string
   quantity: number
-  price: number
+  unitPrice: number
 }
 
 type AddOrderFormProps = {
@@ -25,9 +26,6 @@ type AddOrderFormProps = {
   products: Product[]
   onOrderAdded: () => void
 }
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
 
 function AddOrderForm({
   customers,
@@ -37,162 +35,104 @@ function AddOrderForm({
   const [customerId, setCustomerId] = useState('')
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState('1')
-
-  const [orderItems, setOrderItems] =
-    useState<OrderItemDraft[]>([])
-
+  const [items, setItems] = useState<OrderItemInput[]>([])
   const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
 
   const selectedProduct = products.find(
     (product) => product.id === Number(productId)
   )
 
-  const orderTotal = useMemo(() => {
-    return orderItems.reduce(
-      (total, item) =>
-        total + item.price * item.quantity,
-      0
-    )
-  }, [orderItems])
+  const orderTotal = items.reduce(
+    (total, item) =>
+      total + item.unitPrice * item.quantity,
+    0
+  )
 
   const handleAddItem = () => {
     setMessage('')
 
-    if (!productId || !selectedProduct) {
-      setMessage('Select a product first.')
+    if (!selectedProduct) {
+      setMessage('Please select a product.')
       return
     }
 
     const quantityNumber = Number(quantity)
 
     if (
-      !Number.isInteger(quantityNumber) ||
-      quantityNumber <= 0
+      !quantityNumber ||
+      quantityNumber < 1 ||
+      quantityNumber > selectedProduct.quantityInStock
     ) {
-      setMessage(
-        'Quantity must be a whole number greater than zero.'
-      )
+      setMessage('Please enter a valid quantity.')
       return
     }
 
-    const existingItem = orderItems.find(
-      (item) => item.productId === selectedProduct.id
-    )
-
-    const quantityAlreadyAdded =
-      existingItem?.quantity ?? 0
-
-    if (
-      quantityAlreadyAdded + quantityNumber >
-      selectedProduct.quantityInStock
-    ) {
-      setMessage(
-        `Only ${selectedProduct.quantityInStock} units of ${selectedProduct.name} are available.`
-      )
-      return
-    }
-
-    if (existingItem) {
-      setOrderItems((currentItems) =>
-        currentItems.map((item) =>
-          item.productId === selectedProduct.id
-            ? {
-                ...item,
-                quantity:
-                  item.quantity + quantityNumber,
-              }
-            : item
-        )
-      )
-    } else {
-      setOrderItems((currentItems) => [
-        ...currentItems,
-        {
-          productId: selectedProduct.id,
-          productName: selectedProduct.name,
-          quantity: quantityNumber,
-          price: Number(selectedProduct.price),
-        },
-      ])
-    }
+    setItems((current) => [
+      ...current,
+      {
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        quantity: quantityNumber,
+        unitPrice: Number(selectedProduct.price),
+      },
+    ])
 
     setProductId('')
     setQuantity('1')
   }
 
-  const handleRemoveItem = (productIdToRemove: number) => {
-    setOrderItems((currentItems) =>
-      currentItems.filter(
-        (item) =>
-          item.productId !== productIdToRemove
-      )
+  const handleRemoveItem = (index: number) => {
+    setItems((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index)
     )
   }
 
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setMessage('')
 
     if (!customerId) {
-      setMessage('Select a customer.')
+      setMessage('Please select a customer.')
       return
     }
 
-    if (orderItems.length === 0) {
-      setMessage('Add at least one product to the order.')
+    if (items.length === 0) {
+      setMessage('Add at least one item to the order.')
       return
     }
 
-    try {
-      setLoading(true)
-
-      const response = await fetch(`${API_BASE}/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    const response = await apiFetch('/orders', {
+      method: 'POST',
+      body: JSON.stringify({
+        customer: {
+          id: Number(customerId),
         },
-        body: JSON.stringify({
-          customer: {
-            id: Number(customerId),
+        items: items.map((item) => ({
+          product: {
+            id: item.productId,
           },
-          items: orderItems.map((item) => ({
-            product: {
-              id: item.productId,
-            },
-            quantity: item.quantity,
-          })),
-        }),
-      })
+          quantity: item.quantity,
+        })),
+      }),
+    })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-
-        throw new Error(
-          errorText || 'Unable to create order.'
-        )
-      }
-
-      setCustomerId('')
-      setProductId('')
-      setQuantity('1')
-      setOrderItems([])
-      setMessage('Order created successfully.')
-
-      onOrderAdded()
-    } catch (error) {
-      console.error(error)
+    if (!response.ok) {
+      const errorText = await response.text()
 
       setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to create order.'
+        errorText || 'Unable to create order.'
       )
-    } finally {
-      setLoading(false)
+
+      return
     }
+
+    setCustomerId('')
+    setProductId('')
+    setQuantity('1')
+    setItems([])
+    setMessage('Order created successfully.')
+
+    onOrderAdded()
   }
 
   return (
@@ -210,7 +150,9 @@ function AddOrderForm({
           }
           required
         >
-          <option value="">Select customer</option>
+          <option value="">
+            Select customer
+          </option>
 
           {customers.map((customer) => (
             <option
@@ -229,15 +171,14 @@ function AddOrderForm({
             setProductId(event.target.value)
           }
         >
-          <option value="">Select product</option>
+          <option value="">
+            Select product
+          </option>
 
           {products.map((product) => (
             <option
               key={product.id}
               value={product.id}
-              disabled={
-                product.quantityInStock <= 0
-              }
             >
               {product.name} (
               {product.quantityInStock} in stock)
@@ -265,57 +206,44 @@ function AddOrderForm({
         </button>
       </div>
 
-      {orderItems.length > 0 && (
+      {items.length > 0 && (
         <div className="order-items-preview">
           <h3>Order Items</h3>
 
-          <div className="order-items-header">
-            <span>Product</span>
-            <span>Quantity</span>
-            <span>Price</span>
-            <span>Line Total</span>
-            <span>Action</span>
-          </div>
-
-          {orderItems.map((item) => (
+          {items.map((item, index) => (
             <div
-              className="order-items-row"
-              key={item.productId}
+              className="order-preview-row"
+              key={`${item.productId}-${index}`}
             >
-              <span>{item.productName}</span>
-
-              <span>{item.quantity}</span>
+              <span>
+                {item.productName}
+              </span>
 
               <span>
-                ${item.price.toFixed(2)}
+                Qty: {item.quantity}
               </span>
 
               <span>
                 $
                 {(
-                  item.price * item.quantity
+                  item.unitPrice * item.quantity
                 ).toFixed(2)}
               </span>
 
-              <span>
-                <button
-                  type="button"
-                  className="delete-button"
-                  onClick={() =>
-                    handleRemoveItem(
-                      item.productId
-                    )
-                  }
-                >
-                  Remove
-                </button>
-              </span>
+              <button
+                type="button"
+                className="delete-button"
+                onClick={() =>
+                  handleRemoveItem(index)
+                }
+              >
+                Remove
+              </button>
             </div>
           ))}
 
-          <div className="order-total">
-            <span>Order Total</span>
-
+          <div className="order-total-preview">
+            <span>Estimated Total</span>
             <strong>
               ${orderTotal.toFixed(2)}
             </strong>
@@ -326,9 +254,8 @@ function AddOrderForm({
       <button
         type="submit"
         className="primary-button"
-        disabled={loading}
       >
-        {loading ? 'Placing Order...' : 'Place Order'}
+        Place Order
       </button>
 
       {message && (

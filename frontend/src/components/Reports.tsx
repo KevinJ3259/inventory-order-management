@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiFetch } from '../api'
 
 type ReportSummary = {
   totalRevenue: number
@@ -46,9 +47,6 @@ type ReportsProps = {
   summary: ReportSummary | null
 }
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api'
-
 function Reports({ summary }: ReportsProps) {
   const [topSellingProducts, setTopSellingProducts] =
     useState<TopSellingProduct[]>([])
@@ -77,11 +75,15 @@ function Reports({ summary }: ReportsProps) {
   const [salesByCustomer, setSalesByCustomer] =
     useState<CustomerSales[]>([])
 
-  const [loadingSalesByCustomer, setLoadingSalesByCustomer] =
-    useState(true)
+  const [
+    loadingSalesByCustomer,
+    setLoadingSalesByCustomer,
+  ] = useState(true)
 
-  const [salesByCustomerError, setSalesByCustomerError] =
-    useState('')
+  const [
+    salesByCustomerError,
+    setSalesByCustomerError,
+  ] = useState('')
 
   useEffect(() => {
     const loadTopSellingProducts = async () => {
@@ -89,8 +91,8 @@ function Reports({ summary }: ReportsProps) {
         setLoadingTopProducts(true)
         setTopProductsError('')
 
-        const response = await fetch(
-          `${API_BASE}/reports/top-selling-products`
+        const response = await apiFetch(
+          '/reports/top-selling-products'
         )
 
         if (!response.ok) {
@@ -120,15 +122,14 @@ function Reports({ summary }: ReportsProps) {
   useEffect(() => {
     const loadCustomers = async () => {
       try {
-        const response = await fetch(
-          `${API_BASE}/customers`
-        )
+        const response = await apiFetch('/customers')
 
         if (!response.ok) {
           throw new Error('Unable to load customers.')
         }
 
-        const data: Customer[] = await response.json()
+        const data: Customer[] =
+          await response.json()
 
         setCustomers(data)
       } catch (error) {
@@ -145,8 +146,8 @@ function Reports({ summary }: ReportsProps) {
         setLoadingSalesByCustomer(true)
         setSalesByCustomerError('')
 
-        const response = await fetch(
-          `${API_BASE}/reports/sales-by-customer`
+        const response = await apiFetch(
+          '/reports/sales-by-customer'
         )
 
         if (!response.ok) {
@@ -187,8 +188,8 @@ function Reports({ summary }: ReportsProps) {
     try {
       setLoadingCustomerOrders(true)
 
-      const response = await fetch(
-        `${API_BASE}/reports/customers/${customerId}/orders`
+      const response = await apiFetch(
+        `/reports/customers/${customerId}/orders`
       )
 
       if (!response.ok) {
@@ -254,27 +255,37 @@ function Reports({ summary }: ReportsProps) {
         <div className="status-summary-grid">
           <div className="status-summary-card">
             <span>Placed</span>
-            <strong>{summary.placedOrders}</strong>
+            <strong>
+              {summary.placedOrders}
+            </strong>
           </div>
 
           <div className="status-summary-card">
             <span>Processing</span>
-            <strong>{summary.processingOrders}</strong>
+            <strong>
+              {summary.processingOrders}
+            </strong>
           </div>
 
           <div className="status-summary-card">
             <span>Shipped</span>
-            <strong>{summary.shippedOrders}</strong>
+            <strong>
+              {summary.shippedOrders}
+            </strong>
           </div>
 
           <div className="status-summary-card">
             <span>Completed</span>
-            <strong>{summary.completedOrders}</strong>
+            <strong>
+              {summary.completedOrders}
+            </strong>
           </div>
 
           <div className="status-summary-card">
             <span>Cancelled</span>
-            <strong>{summary.cancelledOrders}</strong>
+            <strong>
+              {summary.cancelledOrders}
+            </strong>
           </div>
         </div>
       </section>
@@ -288,16 +299,19 @@ function Reports({ summary }: ReportsProps) {
           <p>Loading top-selling products...</p>
         )}
 
-        {!loadingTopProducts && topProductsError && (
-          <p className="form-message">
-            {topProductsError}
-          </p>
-        )}
+        {!loadingTopProducts &&
+          topProductsError && (
+            <p className="form-message">
+              {topProductsError}
+            </p>
+          )}
 
         {!loadingTopProducts &&
           !topProductsError &&
           topSellingProducts.length === 0 && (
-            <p>No product sales data available.</p>
+            <p>
+              No product sales data available.
+            </p>
           )}
 
         {!loadingTopProducts &&
@@ -319,12 +333,24 @@ function Reports({ summary }: ReportsProps) {
                     key={product.sku}
                   >
                     <span>#{index + 1}</span>
-                    <span>{product.productName}</span>
-                    <span>{product.sku}</span>
-                    <span>{product.unitsSold}</span>
+
+                    <span>
+                      {product.productName}
+                    </span>
+
+                    <span>
+                      {product.sku}
+                    </span>
+
+                    <span>
+                      {product.unitsSold}
+                    </span>
+
                     <span>
                       $
-                      {Number(product.revenue).toFixed(2)}
+                      {Number(
+                        product.revenue
+                      ).toFixed(2)}
                     </span>
                   </div>
                 )
@@ -352,7 +378,9 @@ function Reports({ summary }: ReportsProps) {
         {!loadingSalesByCustomer &&
           !salesByCustomerError &&
           salesByCustomer.length === 0 && (
-            <p>No customer sales data available.</p>
+            <p>
+              No customer sales data available.
+            </p>
           )}
 
         {!loadingSalesByCustomer &&
@@ -366,25 +394,34 @@ function Reports({ summary }: ReportsProps) {
                 <span>Total Spent</span>
               </div>
 
-              {salesByCustomer.map((customer) => (
-                <div
-                  className="sales-customer-row"
-                  key={customer.customerId}
-                >
-                  <span>
-                    {customer.firstName}{' '}
-                    {customer.lastName}
-                  </span>
+              {salesByCustomer.map(
+                (customer) => (
+                  <div
+                    className="sales-customer-row"
+                    key={customer.customerId}
+                  >
+                    <span>
+                      {customer.firstName}{' '}
+                      {customer.lastName}
+                    </span>
 
-                  <span>{customer.orderCount}</span>
-                  <span>{customer.itemsPurchased}</span>
+                    <span>
+                      {customer.orderCount}
+                    </span>
 
-                  <span>
-                    $
-                    {Number(customer.totalSpent).toFixed(2)}
-                  </span>
-                </div>
-              ))}
+                    <span>
+                      {customer.itemsPurchased}
+                    </span>
+
+                    <span>
+                      $
+                      {Number(
+                        customer.totalSpent
+                      ).toFixed(2)}
+                    </span>
+                  </div>
+                )
+              )}
             </div>
           )}
       </section>
@@ -398,10 +435,14 @@ function Reports({ summary }: ReportsProps) {
           <select
             value={selectedCustomerId}
             onChange={(event) =>
-              handleCustomerChange(event.target.value)
+              handleCustomerChange(
+                event.target.value
+              )
             }
           >
-            <option value="">Select customer</option>
+            <option value="">
+              Select customer
+            </option>
 
             {customers.map((customer) => (
               <option
@@ -430,7 +471,9 @@ function Reports({ summary }: ReportsProps) {
           selectedCustomerId &&
           !customerOrdersError &&
           customerOrders.length === 0 && (
-            <p>This customer has no orders.</p>
+            <p>
+              This customer has no orders.
+            </p>
           )}
 
         {!loadingCustomerOrders &&
@@ -449,7 +492,9 @@ function Reports({ summary }: ReportsProps) {
                   className="customer-orders-row"
                   key={order.orderId}
                 >
-                  <span>#{order.orderId}</span>
+                  <span>
+                    #{order.orderId}
+                  </span>
 
                   <span>
                     {new Date(
@@ -463,11 +508,15 @@ function Reports({ summary }: ReportsProps) {
                     </span>
                   </span>
 
-                  <span>{order.itemCount}</span>
+                  <span>
+                    {order.itemCount}
+                  </span>
 
                   <span>
                     $
-                    {Number(order.totalAmount).toFixed(2)}
+                    {Number(
+                      order.totalAmount
+                    ).toFixed(2)}
                   </span>
                 </div>
               ))}
